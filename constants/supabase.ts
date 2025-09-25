@@ -4,7 +4,7 @@ import { createClient } from '@supabase/supabase-js';
 // 1. Vai su supabase.com -> Il tuo progetto -> Settings -> API
 // 2. Copia Project URL e anon public key
 const supabaseUrl = 'https://ngbgnzxcklvehhgssmev.supabase.co'; // Sostituisci con il tuo Project URL
-const supabaseAnonKey = 'YOUR_SUPABASE_ANON_KEY'; // Sostituisci con la tua anon public key
+const supabaseAnonKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im5nYmduenhja2x2ZWhoZ3NzbWV2Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTg3ODQxNTQsImV4cCI6MjA3NDM2MDE1NH0.RlEIYMAE4iU6ITZ7Dxwm0CbYh0qF1FVF64YS7yNakZw'; // Sostituisci con la tua anon public key
 
 export const supabase = createClient(supabaseUrl, supabaseAnonKey);
 
