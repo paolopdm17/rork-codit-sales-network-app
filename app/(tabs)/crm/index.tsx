@@ -351,31 +351,6 @@ export default function CRMScreen() {
         }}
       />
 
-      {/* Action Buttons */}
-      <View style={styles.actionButtonsContainer}>
-        <TouchableOpacity
-          style={styles.searchButton}
-          onPress={() => {
-            setShowSearch(!showSearch);
-            if (showSearch) {
-              setSearchQuery('');
-            }
-          }}
-        >
-          {showSearch ? (
-            <X color="#1E40AF" size={24} />
-          ) : (
-            <Search color="#1E40AF" size={24} />
-          )}
-        </TouchableOpacity>
-        <TouchableOpacity
-          style={styles.addButton}
-          onPress={activeTab === 'clients' ? handleAddClient : activeTab === 'consultants' ? handleAddConsultant : handleAddDeal}
-        >
-          <Plus color="#fff" size={24} />
-        </TouchableOpacity>
-      </View>
-
       {/* Search Bar */}
       {showSearch && (
         <View style={styles.searchContainer}>
@@ -501,6 +476,31 @@ export default function CRMScreen() {
           </View>
         )}
       </ScrollView>
+
+      {/* Floating Action Buttons */}
+      <View style={styles.floatingButtonsContainer}>
+        <TouchableOpacity
+          style={styles.floatingSearchButton}
+          onPress={() => {
+            setShowSearch(!showSearch);
+            if (showSearch) {
+              setSearchQuery('');
+            }
+          }}
+        >
+          {showSearch ? (
+            <X color="#1E40AF" size={24} />
+          ) : (
+            <Search color="#1E40AF" size={24} />
+          )}
+        </TouchableOpacity>
+        <TouchableOpacity
+          style={styles.floatingAddButton}
+          onPress={activeTab === 'clients' ? handleAddClient : activeTab === 'consultants' ? handleAddConsultant : handleAddDeal}
+        >
+          <Plus color="#fff" size={24} />
+        </TouchableOpacity>
+      </View>
     </View>
   );
 }
@@ -510,44 +510,41 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: '#F8FAFC',
   },
-  actionButtonsContainer: {
+  floatingButtonsContainer: {
+    position: 'absolute',
+    bottom: 30,
+    right: 20,
     flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'flex-end',
-    gap: 12,
-    paddingHorizontal: 20,
-    paddingVertical: 16,
-    backgroundColor: '#fff',
-    borderBottomWidth: 1,
-    borderBottomColor: '#E2E8F0',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.05,
-    shadowRadius: 2,
-    elevation: 1,
+    gap: 16,
   },
-  searchButton: {
-    backgroundColor: '#F8FAFC',
-    borderRadius: 24,
-    width: 48,
-    height: 48,
+  floatingSearchButton: {
+    backgroundColor: '#fff',
+    borderRadius: 28,
+    width: 56,
+    height: 56,
     justifyContent: 'center',
     alignItems: 'center',
     borderWidth: 1,
     borderColor: '#E2E8F0',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.15,
+    shadowRadius: 8,
+    elevation: 6,
   },
-  addButton: {
+  floatingAddButton: {
     backgroundColor: '#1E40AF',
-    borderRadius: 24,
-    width: 48,
-    height: 48,
+    borderRadius: 28,
+    width: 56,
+    height: 56,
     justifyContent: 'center',
     alignItems: 'center',
     shadowColor: '#1E40AF',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.2,
-    shadowRadius: 4,
-    elevation: 3,
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 8,
+    elevation: 8,
   },
   searchContainer: {
     backgroundColor: '#fff',
@@ -555,6 +552,11 @@ const styles = StyleSheet.create({
     paddingVertical: 16,
     borderBottomWidth: 1,
     borderBottomColor: '#E2E8F0',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 3,
   },
   searchInputContainer: {
     flexDirection: 'row',
@@ -607,6 +609,7 @@ const styles = StyleSheet.create({
   },
   content: {
     flex: 1,
+    paddingBottom: 100,
   },
   section: {
     padding: 20,
