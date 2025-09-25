@@ -1,9 +1,9 @@
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { Stack } from "expo-router";
 import * as SplashScreen from "expo-splash-screen";
-import React, { useEffect, Component, ReactNode } from "react";
+import React, { useEffect, Component, ReactNode, useState } from "react";
 import { GestureHandlerRootView } from "react-native-gesture-handler";
-import { View, Text, TouchableOpacity, StyleSheet } from "react-native";
+import { View, Text, TouchableOpacity, StyleSheet, ActivityIndicator } from "react-native";
 import { AuthProvider, useAuth } from "@/hooks/auth-context";
 import { DataProvider, useData } from "@/hooks/data-context";
 
@@ -163,20 +163,51 @@ const errorStyles = StyleSheet.create({
   },
 });
 
-// Component to sync auth user with data context
+const initStyles = StyleSheet.create({
+  container: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    backgroundColor: '#f5f5f5',
+  },
+  text: {
+    marginTop: 16,
+    fontSize: 16,
+    color: '#666',
+  },
+});
+
+// Component to sync auth user with data context and handle initialization
 function UserSyncWrapper({ children }: { children: ReactNode }) {
-  const { user } = useAuth();
+  const { user, isLoading: authLoading } = useAuth();
   const { setCurrentUser } = useData();
+  const [isInitialized, setIsInitialized] = useState(false);
 
   useEffect(() => {
     console.log('UserSyncWrapper: Syncing user with data context:', user?.name || 'No user');
-    // Use setTimeout to prevent blocking the UI thread
-    const timeoutId = setTimeout(() => {
-      setCurrentUser(user);
-    }, 10);
+    console.log('UserSyncWrapper: Auth loading:', authLoading);
     
-    return () => clearTimeout(timeoutId);
-  }, [user, setCurrentUser]);
+    // Wait for auth to finish loading before initializing
+    if (!authLoading) {
+      const timeoutId = setTimeout(() => {
+        setCurrentUser(user);
+        setIsInitialized(true);
+        console.log('UserSyncWrapper: Initialization complete');
+      }, 100); // Small delay to ensure everything is ready
+      
+      return () => clearTimeout(timeoutId);
+    }
+  }, [user, setCurrentUser, authLoading]);
+
+  // Show loading screen while initializing
+  if (!isInitialized || authLoading) {
+    return (
+      <View style={initStyles.container}>
+        <ActivityIndicator size="large" color="#2196f3" />
+        <Text style={initStyles.text}>Caricamento...</Text>
+      </View>
+    );
+  }
 
   return <>{children}</>;
 }
@@ -277,13 +308,46 @@ function RootLayoutNav() {
 }
 
 export default function RootLayout() {
+  const [isAppReady, setIsAppReady] = useState(false);
+
   useEffect(() => {
-    SplashScreen.hideAsync();
+    async function prepare() {
+      try {
+        console.log('RootLayout: Starting app initialization');
+        
+        // Keep splash screen visible while we prepare
+        await SplashScreen.preventAutoHideAsync();
+        
+        // Small delay to ensure everything is ready
+        await new Promise(resolve => setTimeout(resolve, 500));
+        
+        console.log('RootLayout: App initialization complete');
+        setIsAppReady(true);
+      } catch (e) {
+        console.error('RootLayout: Error during initialization:', e);
+        setIsAppReady(true); // Still show the app even if there's an error
+      } finally {
+        await SplashScreen.hideAsync();
+      }
+    }
+
+    prepare();
   }, []);
 
   const handleErrorReset = () => {
     console.log('Error boundary reset triggered');
+    setIsAppReady(false);
+    setTimeout(() => setIsAppReady(true), 100);
   };
+
+  if (!isAppReady) {
+    return (
+      <View style={initStyles.container}>
+        <ActivityIndicator size="large" color="#2196f3" />
+        <Text style={initStyles.text}>Inizializzazione...</Text>
+      </View>
+    );
+  }
 
   return (
     <ErrorBoundary onReset={handleErrorReset}>
