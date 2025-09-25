@@ -65,8 +65,17 @@ export default function ProfileScreen() {
         text: "Esci",
         style: "destructive",
         onPress: async () => {
-          await logout();
-          router.replace("/(auth)/login");
+          try {
+            console.log('Starting logout process...');
+            await logout();
+            console.log('Logout completed, navigating to login...');
+            // Force navigation to login screen
+            router.dismissAll();
+            router.replace("/(auth)/login");
+          } catch (error) {
+            console.error('Error during logout:', error);
+            Alert.alert("Errore", "Si è verificato un errore durante il logout");
+          }
         },
       },
     ]);

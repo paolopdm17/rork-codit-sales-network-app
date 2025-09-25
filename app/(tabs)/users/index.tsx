@@ -7,12 +7,13 @@ import {
   RefreshControl,
   Modal,
   Alert,
+  Clipboard,
 } from "react-native";
 import { useData } from "@/hooks/data-context";
 import { useAuth } from "@/hooks/auth-context";
 import { useState } from "react";
 import { router } from "expo-router";
-import { Clock, ChevronRight, UserPlus, Edit, Info, X, CheckCircle, Trash2, Shield, Crown, Users, User } from "lucide-react-native";
+import { Clock, ChevronRight, UserPlus, Edit, Info, X, CheckCircle, Trash2, Shield, Crown, Users, User, Key, Copy } from "lucide-react-native";
 import { CAREER_LEVELS, LEVEL_REQUIREMENTS } from "@/constants/levels";
 
 export default function UsersScreen() {
@@ -74,6 +75,28 @@ export default function UsersScreen() {
               );
             }
           },
+        },
+      ]
+    );
+  };
+
+  const handleShowCredentials = (userEmail: string, userName: string) => {
+    const credentials = `Email: ${userEmail}\nPassword: password123`;
+    
+    Alert.alert(
+      `Credenziali di Accesso - ${userName}`,
+      `Queste sono le credenziali per accedere alla piattaforma:\n\n${credentials}\n\nL'utente può utilizzare queste credenziali per effettuare il login.`,
+      [
+        {
+          text: "Copia Credenziali",
+          onPress: () => {
+            Clipboard.setString(credentials);
+            Alert.alert("Copiato!", "Le credenziali sono state copiate negli appunti");
+          },
+        },
+        {
+          text: "Chiudi",
+          style: "cancel",
         },
       ]
     );
@@ -142,6 +165,13 @@ export default function UsersScreen() {
         </View>
         {isAdminOrMaster && (
           <View style={styles.userActions}>
+            <TouchableOpacity
+              style={[styles.actionButton, styles.credentialsActionButton]}
+              onPress={() => handleShowCredentials(userData.email, userData.name)}
+            >
+              <Key color="#fff" size={16} />
+              <Text style={styles.actionButtonText}>Credenziali</Text>
+            </TouchableOpacity>
             {userData.role === "commercial" && (
               <TouchableOpacity
                 style={styles.actionButton}
@@ -644,6 +674,9 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.1,
     shadowRadius: 2,
     elevation: 2,
+  },
+  credentialsActionButton: {
+    backgroundColor: "#8B5CF6",
   },
   editActionButton: {
     backgroundColor: "#3B82F6",
