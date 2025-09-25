@@ -37,46 +37,51 @@ export default function TabLayout() {
           tabBarIcon: ({ color }) => <Home color={color} size={24} />,
         }}
       />
-      <Tabs.Screen
-        name="users"
-        options={{
-          title: "Utenti",
-          tabBarIcon: ({ color }) => <Users color={color} size={24} />,
-          href: isAdminOrMaster ? "/users" : null,
-        }}
-      />
-      <Tabs.Screen
-        name="contracts"
-        options={{
-          title: "Contratti",
-          tabBarIcon: ({ color }) => <FileText color={color} size={24} />,
-          href: isAdminOrMaster ? "/contracts" : null,
-        }}
-      />
-      <Tabs.Screen
-        name="my-contracts"
-        options={{
-          title: "I Miei Contratti",
-          tabBarIcon: ({ color }) => <Briefcase color={color} size={24} />,
-          href: !isAdminOrMaster ? "/my-contracts" : null,
-        }}
-      />
-      <Tabs.Screen
-        name="my-team"
-        options={{
-          title: "Il Mio Team",
-          tabBarIcon: ({ color }) => <UserCheck color={color} size={24} />,
-          href: isCommercial ? "/my-team" : null,
-        }}
-      />
-      <Tabs.Screen
-        name="team-earnings"
-        options={{
-          title: "Guadagni Team",
-          tabBarIcon: ({ color }) => <TrendingUp color={color} size={24} />,
-          href: isMaster ? "/team-earnings" : null,
-        }}
-      />
+      {isAdminOrMaster && (
+        <Tabs.Screen
+          name="users"
+          options={{
+            title: "Utenti",
+            tabBarIcon: ({ color }) => <Users color={color} size={24} />,
+          }}
+        />
+      )}
+      {isAdminOrMaster && (
+        <Tabs.Screen
+          name="contracts"
+          options={{
+            title: "Contratti",
+            tabBarIcon: ({ color }) => <FileText color={color} size={24} />,
+          }}
+        />
+      )}
+      {!isAdminOrMaster && (
+        <Tabs.Screen
+          name="my-contracts"
+          options={{
+            title: "I Miei Contratti",
+            tabBarIcon: ({ color }) => <Briefcase color={color} size={24} />,
+          }}
+        />
+      )}
+      {isCommercial && (
+        <Tabs.Screen
+          name="my-team"
+          options={{
+            title: "Il Mio Team",
+            tabBarIcon: ({ color }) => <UserCheck color={color} size={24} />,
+          }}
+        />
+      )}
+      {isMaster && (
+        <Tabs.Screen
+          name="team-earnings"
+          options={{
+            title: "Guadagni Team",
+            tabBarIcon: ({ color }) => <TrendingUp color={color} size={24} />,
+          }}
+        />
+      )}
       <Tabs.Screen
         name="crm"
         options={{
