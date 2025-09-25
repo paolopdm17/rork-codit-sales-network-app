@@ -6,6 +6,12 @@ import { createClient } from '@supabase/supabase-js';
 const supabaseUrl = process.env.EXPO_PUBLIC_SUPABASE_URL || 'https://ngbgnzxcklvehhgssmev.supabase.co';
 const supabaseAnonKey = process.env.EXPO_PUBLIC_SUPABASE_ANON_KEY || 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im5nYmduenhja2x2ZWhoZ3NzbWV2Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTg3ODQxNTQsImV4cCI6MjA3NDM2MDE1NH0.RlEIYMAE4iU6ITZ7Dxwm0CbYh0qF1FVF64YS7yNakZw';
 
+console.log('Supabase configuration:', {
+  url: supabaseUrl,
+  hasKey: !!supabaseAnonKey,
+  keyPreview: supabaseAnonKey ? supabaseAnonKey.substring(0, 20) + '...' : 'No key'
+});
+
 export const supabase = createClient(supabaseUrl, supabaseAnonKey);
 
 // Tipi per le tabelle del database

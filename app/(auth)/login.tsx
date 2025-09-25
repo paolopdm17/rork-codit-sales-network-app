@@ -32,10 +32,14 @@ export default function LoginScreen() {
 
     setIsLoading(true);
     try {
+      console.log('Attempting login for:', email);
       await login(email, password);
+      console.log('Login successful, redirecting to tabs');
       router.replace("/(tabs)");
-    } catch {
-      Alert.alert("Errore", "Credenziali non valide");
+    } catch (error) {
+      console.error('Login failed:', error);
+      const errorMessage = error instanceof Error ? error.message : 'Credenziali non valide';
+      Alert.alert("Errore di Login", errorMessage);
     } finally {
       setIsLoading(false);
     }
@@ -151,6 +155,10 @@ export default function LoginScreen() {
             <View style={styles.demoSection}>
               <Text style={styles.demoTitle}>Account Demo</Text>
               <View style={styles.demoAccounts}>
+                <View style={styles.demoAccount}>
+                  <View style={[styles.demoIndicator, { backgroundColor: '#8b5cf6' }]} />
+                  <Text style={styles.demoAccountText}>master@codit.com - Master</Text>
+                </View>
                 <View style={styles.demoAccount}>
                   <View style={[styles.demoIndicator, { backgroundColor: '#ef4444' }]} />
                   <Text style={styles.demoAccountText}>admin@codit.com - Amministratore</Text>
