@@ -3,6 +3,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useEffect, useState } from 'react';
 import { Contract, User, DashboardMetrics, TeamMember, CareerLevel, Client, Consultant, Deal } from '@/types';
 import { COMMISSION_RATES, LEVEL_REQUIREMENTS } from '@/constants/levels';
+import { SupabaseService } from '@/hooks/supabase-service';
 
 // Utility function to safely parse JSON
 const safeJSONParse = (jsonString: string): any | null => {
@@ -52,6 +53,8 @@ interface DataState {
   visibleDeals: Deal[];
   metrics: DashboardMetrics | null;
   isLoading: boolean;
+  isOnline: boolean;
+  syncStatus: 'idle' | 'syncing' | 'error' | 'success';
   addContract: (contract: Omit<Contract, 'id' | 'createdAt'>) => Promise<void>;
   updateContract: (contractId: string, contract: Contract) => Promise<void>;
   deleteContract: (contractId: string) => Promise<void>;
@@ -91,6 +94,8 @@ export const [DataProvider, useData] = createContextHook<DataState>(() => {
   const [metrics, setMetrics] = useState<DashboardMetrics | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [currentUser, setCurrentUser] = useState<User | null>(null);
+  const [isOnline, setIsOnline] = useState(true);
+  const [syncStatus, setSyncStatus] = useState<'idle' | 'syncing' | 'error' | 'success'>('idle');
 
   const getConnectedUserIds = (userId: string, allUsers: User[]): string[] => {
     const connectedIds = new Set<string>();
@@ -212,7 +217,100 @@ export const [DataProvider, useData] = createContextHook<DataState>(() => {
     try {
       setIsLoading(true);
       
-      // Load contracts
+      // Test Supabase connection
+      const supabaseConnected = await SupabaseService.testConnection();
+      setIsOnline(supabaseConnected);
+      
+      console.log('Supabase connection status:', supabaseConnected ? 'ONLINE' : 'OFFLINE');
+      
+      // Try to load from Supabase first if online
+      if (supabaseConnected) {
+        try {
+          console.log('Loading data from Supabase...');
+          const [supabaseUsers, supabaseContracts, supabaseClients, supabaseConsultants, supabaseDeals] = await Promise.all([
+            SupabaseService.getUsers(),
+            SupabaseService.getContracts(),
+            SupabaseService.getClients(),
+            SupabaseService.getConsultants(),
+            SupabaseService.getDeals()
+          ]);
+          
+          console.log('Loaded from Supabase:', {
+            users: supabaseUsers.length,
+            contracts: supabaseContracts.length,
+            clients: supabaseClients.length,
+            consultants: supabaseConsultants.length,
+            deals: supabaseDeals.length
+          });
+          
+          // Update local storage with Supabase data
+          await AsyncStorage.setItem('contracts', JSON.stringify(supabaseContracts));
+          await AsyncStorage.setItem('users', JSON.stringify(supabaseUsers));
+          await AsyncStorage.setItem('clients', JSON.stringify(supabaseClients));
+          await AsyncStorage.setItem('consultants', JSON.stringify(supabaseConsultants));
+          await AsyncStorage.setItem('deals', JSON.stringify(supabaseDeals));
+          
+          // Set state with Supabase data
+          setContracts(supabaseContracts);
+          setUsers(supabaseUsers);
+          setClients(supabaseClients);
+          setConsultants(supabaseConsultants);
+          setDeals(supabaseDeals);
+          
+          // If no data in Supabase, sync local data to Supabase
+          if (supabaseUsers.length === 0 && supabaseContracts.length === 0) {
+            console.log('No data in Supabase, checking local data...');
+            const localContracts = await AsyncStorage.getItem('contracts');
+            const localUsers = await AsyncStorage.getItem('users');
+            
+            if (localContracts || localUsers) {
+              console.log('Found local data, syncing to Supabase...');
+              await syncLocalToSupabase();
+              // Reload after sync
+              return loadData(user);
+            } else {
+              console.log('No local data, generating mock data...');
+              const mockUsers = generateMockUsers();
+              const mockContracts = generateMockContracts();
+              const mockDeals = generateMockDeals();
+              
+              // Save to both local and Supabase
+              await Promise.all([
+                AsyncStorage.setItem('contracts', JSON.stringify(mockContracts)),
+                AsyncStorage.setItem('users', JSON.stringify(mockUsers)),
+                AsyncStorage.setItem('deals', JSON.stringify(mockDeals)),
+                SupabaseService.syncLocalDataToSupabase(mockUsers, mockContracts, [], [], mockDeals)
+              ]);
+              
+              setContracts(mockContracts);
+              setUsers(mockUsers);
+              setDeals(mockDeals);
+            }
+          }
+          
+          setSyncStatus('success');
+        } catch (supabaseError) {
+          console.error('Error loading from Supabase, falling back to local storage:', supabaseError);
+          setSyncStatus('error');
+          setIsOnline(false);
+          // Fall back to local storage loading
+          await loadFromLocalStorage();
+        }
+      } else {
+        console.log('Supabase offline, loading from local storage...');
+        await loadFromLocalStorage();
+      }
+    } catch (error) {
+      console.error('Error loading data:', error);
+      setSyncStatus('error');
+    } finally {
+      setIsLoading(false);
+    }
+  };
+  
+  const loadFromLocalStorage = async () => {
+    try {
+      // Load contracts from local storage
       const contractsData = await AsyncStorage.getItem('contracts');
       let loadedContracts: Contract[];
       if (!contractsData) {
@@ -421,16 +519,16 @@ export const [DataProvider, useData] = createContextHook<DataState>(() => {
       setDeals(loadedDeals);
       
       // Calculate metrics for current user
-      if (user) {
-        console.log('Calculating metrics for user:', user.id, user.name);
+      if (currentUser) {
+        console.log('Calculating metrics for user:', currentUser.id, currentUser.name);
         
         // Ensure the current user exists in the users list
-        let userExistsInList = loadedUsers.find(u => u.id === user.id);
+        let userExistsInList = loadedUsers.find(u => u.id === currentUser.id);
         let finalUsersList = loadedUsers;
         
         if (!userExistsInList) {
           console.log('Current user not found in users list, adding them...');
-          finalUsersList = [...loadedUsers, user];
+          finalUsersList = [...loadedUsers, currentUser];
           setUsers(finalUsersList);
           await AsyncStorage.setItem('users', JSON.stringify(finalUsersList));
         } else {
@@ -439,7 +537,7 @@ export const [DataProvider, useData] = createContextHook<DataState>(() => {
           const updatedUser = { ...userExistsInList };
           
           // Special handling for Paolo Di Micco and any admin users - ensure they're always admin
-          if (user.email.toLowerCase().includes('paolo') && user.email.toLowerCase().includes('micco')) {
+          if (currentUser.email.toLowerCase().includes('paolo') && currentUser.email.toLowerCase().includes('micco')) {
             if (updatedUser.role !== 'admin' || updatedUser.level !== 'managing_director') {
               updatedUser.role = 'admin';
               updatedUser.level = 'managing_director';
@@ -449,9 +547,9 @@ export const [DataProvider, useData] = createContextHook<DataState>(() => {
           }
           
           // General admin email pattern check
-          if (user.email.toLowerCase().includes('admin') || 
-              user.email.toLowerCase().includes('paolo.dimicco') ||
-              (user.email.toLowerCase().includes('paolo') && user.email.toLowerCase().includes('micco'))) {
+          if (currentUser.email.toLowerCase().includes('admin') || 
+              currentUser.email.toLowerCase().includes('paolo.dimicco') ||
+              (currentUser.email.toLowerCase().includes('paolo') && currentUser.email.toLowerCase().includes('micco'))) {
             if (updatedUser.role !== 'admin' || updatedUser.level !== 'managing_director') {
               updatedUser.role = 'admin';
               updatedUser.level = 'managing_director';
@@ -462,26 +560,71 @@ export const [DataProvider, useData] = createContextHook<DataState>(() => {
           
           // Update user in database if needed
           if (needsUpdate) {
-            finalUsersList = loadedUsers.map(u => u.id === user.id ? updatedUser : u);
+            finalUsersList = loadedUsers.map(u => u.id === currentUser.id ? updatedUser : u);
             setUsers(finalUsersList);
             await AsyncStorage.setItem('users', JSON.stringify(finalUsersList));
             
             // Also update the auth user
-            const updatedAuthUser = { ...user, role: updatedUser.role, level: updatedUser.level };
+            const updatedAuthUser = { ...currentUser, role: updatedUser.role, level: updatedUser.level };
             await AsyncStorage.setItem('user', JSON.stringify(updatedAuthUser));
             console.log('Updated auth user with new role/level');
           }
         }
         
         // Calculate metrics with the final users list
-        const userMetrics = calculateMetrics(user.id, loadedContracts, finalUsersList, user);
+        const userMetrics = calculateMetrics(currentUser.id, loadedContracts, finalUsersList, currentUser);
         console.log('Calculated metrics:', userMetrics);
         setMetrics(userMetrics);
       }
     } catch (error) {
-      console.error('Error loading data:', error);
-    } finally {
-      setIsLoading(false);
+      console.error('Error loading from local storage:', error);
+    }
+  };
+  
+  // Function to sync local data to Supabase
+  const syncLocalToSupabase = async () => {
+    try {
+      setSyncStatus('syncing');
+      console.log('Syncing local data to Supabase...');
+      
+      // Get all local data
+      const [localContracts, localUsers, localClients, localConsultants, localDeals] = await Promise.all([
+        AsyncStorage.getItem('contracts'),
+        AsyncStorage.getItem('users'),
+        AsyncStorage.getItem('clients'),
+        AsyncStorage.getItem('consultants'),
+        AsyncStorage.getItem('deals')
+      ]);
+      
+      const contractsToSync: Contract[] = localContracts ? safeJSONParse(localContracts) || [] : [];
+      const usersToSync: User[] = localUsers ? safeJSONParse(localUsers) || [] : [];
+      const clientsToSync: Client[] = localClients ? safeJSONParse(localClients) || [] : [];
+      const consultantsToSync: Consultant[] = localConsultants ? safeJSONParse(localConsultants) || [] : [];
+      const dealsToSync: Deal[] = localDeals ? safeJSONParse(localDeals) || [] : [];
+      
+      console.log('Data to sync:', {
+        contracts: contractsToSync.length,
+        users: usersToSync.length,
+        clients: clientsToSync.length,
+        consultants: consultantsToSync.length,
+        deals: dealsToSync.length
+      });
+      
+      // Sync to Supabase
+      await SupabaseService.syncLocalDataToSupabase(
+        usersToSync,
+        contractsToSync,
+        clientsToSync,
+        consultantsToSync,
+        dealsToSync
+      );
+      
+      console.log('Local data synced to Supabase successfully');
+      setSyncStatus('success');
+    } catch (error) {
+      console.error('Error syncing local data to Supabase:', error);
+      setSyncStatus('error');
+      throw error;
     }
   };
 
@@ -895,6 +1038,16 @@ export const [DataProvider, useData] = createContextHook<DataState>(() => {
     // Save to AsyncStorage first
     await AsyncStorage.setItem('contracts', JSON.stringify(updatedContracts));
     
+    // Try to sync to Supabase if online
+    if (isOnline) {
+      try {
+        await SupabaseService.createContract(newContract);
+        console.log('Contract synced to Supabase');
+      } catch (error) {
+        console.warn('Failed to sync contract to Supabase:', error);
+      }
+    }
+    
     // Update state immediately
     setContracts(updatedContracts);
     
@@ -945,6 +1098,16 @@ export const [DataProvider, useData] = createContextHook<DataState>(() => {
     
     // Save to AsyncStorage first
     await AsyncStorage.setItem('contracts', JSON.stringify(updatedContracts));
+    
+    // Try to sync to Supabase if online
+    if (isOnline) {
+      try {
+        await SupabaseService.updateContract(contractId, updatedContract);
+        console.log('Contract update synced to Supabase');
+      } catch (error) {
+        console.warn('Failed to sync contract update to Supabase:', error);
+      }
+    }
     
     // Update state
     setContracts(updatedContracts);
@@ -1860,6 +2023,8 @@ export const [DataProvider, useData] = createContextHook<DataState>(() => {
     visibleDeals,
     metrics,
     isLoading,
+    isOnline,
+    syncStatus,
     addContract,
     updateContract,
     deleteContract,
@@ -2033,7 +2198,7 @@ const generateMockDeals = (): Deal[] => {
       consultantId: 'consultant-1',
       consultantName: 'Marco Sviluppatore',
       value: 45000,
-      status: 'negotiation',
+      status: 'final_interview',
       probability: 75,
       expectedCloseDate: new Date(currentYear, currentMonth + 1, 15),
       notes: 'Cliente molto interessato, in fase di negoziazione finale',
@@ -2048,7 +2213,7 @@ const generateMockDeals = (): Deal[] => {
       clientId: 'client-2',
       clientName: 'TechCorp Solutions',
       value: 28000,
-      status: 'proposal',
+      status: 'initial_interview',
       probability: 60,
       expectedCloseDate: new Date(currentYear, currentMonth + 2, 1),
       notes: 'Proposta inviata, in attesa di feedback',
@@ -2065,7 +2230,7 @@ const generateMockDeals = (): Deal[] => {
       consultantId: 'consultant-2',
       consultantName: 'Anna Frontend',
       value: 65000,
-      status: 'proposal',
+      status: 'initial_interview',
       probability: 40,
       expectedCloseDate: new Date(currentYear, currentMonth + 3, 20),
       notes: 'Prima proposta, cliente sta valutando altre opzioni',
@@ -2079,7 +2244,7 @@ const generateMockDeals = (): Deal[] => {
       clientId: 'client-4',
       clientName: 'Human Resources Inc',
       value: 38000,
-      status: 'negotiation',
+      status: 'final_interview',
       probability: 85,
       expectedCloseDate: new Date(currentYear, currentMonth, 25),
       notes: 'Quasi chiuso, ultimi dettagli contrattuali',
