@@ -77,7 +77,7 @@ export default function TabLayout() {
     visibleTabs: {
       dashboard: true,
       users: isAdminOrMaster,
-      contracts: isAdminOrMaster,
+      contracts: isMaster, // Solo Master può vedere i contratti
       myContracts: isCommercial,
       myTeam: isCommercial,
       teamEarnings: isMaster,
@@ -108,8 +108,8 @@ export default function TabLayout() {
         />
       )}
       
-      {/* Contratti - Solo Master e Admin */}
-      {isAdminOrMaster && (
+      {/* Contratti - Solo Master */}
+      {isMaster && (
         <Tabs.Screen
           name="contracts"
           options={{
