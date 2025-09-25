@@ -151,29 +151,7 @@ export default function LoginScreen() {
               </View>
             </View>
 
-            {/* Demo Accounts */}
-            <View style={styles.demoSection}>
-              <Text style={styles.demoTitle}>Account Demo</Text>
-              <View style={styles.demoAccounts}>
-                <View style={styles.demoAccount}>
-                  <View style={[styles.demoIndicator, { backgroundColor: '#8b5cf6' }]} />
-                  <Text style={styles.demoAccountText}>master@codit.com - Master</Text>
-                </View>
-                <View style={styles.demoAccount}>
-                  <View style={[styles.demoIndicator, { backgroundColor: '#ef4444' }]} />
-                  <Text style={styles.demoAccountText}>admin@codit.com - Amministratore</Text>
-                </View>
-                <View style={styles.demoAccount}>
-                  <View style={[styles.demoIndicator, { backgroundColor: '#f59e0b' }]} />
-                  <Text style={styles.demoAccountText}>leader@codit.com - Team Leader</Text>
-                </View>
-                <View style={styles.demoAccount}>
-                  <View style={[styles.demoIndicator, { backgroundColor: '#10b981' }]} />
-                  <Text style={styles.demoAccountText}>senior@codit.com - Commerciale Senior</Text>
-                </View>
-              </View>
-              <Text style={styles.demoNote}>Usa qualsiasi password per accedere</Text>
-            </View>
+
           </View>
         </KeyboardAvoidingView>
       </SafeAreaView>
@@ -341,46 +319,5 @@ const styles = StyleSheet.create({
     color: '#06b6d4',
     fontWeight: '600' as const,
   },
-  demoSection: {
-    backgroundColor: 'rgba(255, 255, 255, 0.95)',
-    borderRadius: 20,
-    padding: 24,
-    marginTop: 32,
-    marginHorizontal: 4,
-    borderWidth: 1,
-    borderColor: 'rgba(6, 182, 212, 0.1)',
-  },
-  demoTitle: {
-    fontSize: 16,
-    fontWeight: '600' as const,
-    color: '#374151',
-    marginBottom: 16,
-    textAlign: 'center',
-  },
-  demoAccounts: {
-    marginBottom: 16,
-  },
-  demoAccount: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginBottom: 8,
-  },
-  demoIndicator: {
-    width: 8,
-    height: 8,
-    borderRadius: 4,
-    marginRight: 12,
-  },
-  demoAccountText: {
-    fontSize: 14,
-    color: '#4b5563',
-    fontWeight: '500' as const,
-    flex: 1,
-  },
-  demoNote: {
-    fontSize: 13,
-    color: '#6b7280',
-    textAlign: 'center',
-    fontStyle: 'italic',
-  },
+
 });
