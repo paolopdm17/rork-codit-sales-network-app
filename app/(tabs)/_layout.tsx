@@ -1,6 +1,6 @@
 import { Tabs, router } from "expo-router";
 import { Home, Users, FileText, Settings, Briefcase, TrendingUp, UserCheck, Building2 } from "lucide-react-native";
-import React, { useEffect } from "react";
+import React, { useEffect, useMemo } from "react";
 import { useAuth } from "@/hooks/auth-context";
 
 export default function TabLayout() {
@@ -12,24 +12,32 @@ export default function TabLayout() {
     }
   }, [isAuthenticated]);
 
-  const isAdmin = user?.role === "admin";
-  const isMaster = user?.role === "master";
-  const isAdminOrMaster = isAdmin || isMaster;
-  const isCommercial = user?.role === "commercial";
+  // Memoize role checks to prevent unnecessary re-renders
+  const userRoles = useMemo(() => {
+    const isAdmin = user?.role === "admin";
+    const isMaster = user?.role === "master";
+    const isAdminOrMaster = isAdmin || isMaster;
+    const isCommercial = user?.role === "commercial";
+    
+    return { isAdmin, isMaster, isAdminOrMaster, isCommercial };
+  }, [user?.role]);
+  
+  const { isAdmin, isMaster, isAdminOrMaster, isCommercial } = userRoles;
+
+  // Memoize tab screen options to prevent re-creation on every render
+  const tabScreenOptions = useMemo(() => ({
+    tabBarActiveTintColor: "#1E40AF",
+    tabBarInactiveTintColor: "#94A3B8",
+    headerShown: false,
+    tabBarStyle: {
+      backgroundColor: "#fff",
+      borderTopWidth: 1,
+      borderTopColor: "#E2E8F0",
+    },
+  }), []);
 
   return (
-    <Tabs
-      screenOptions={{
-        tabBarActiveTintColor: "#1E40AF",
-        tabBarInactiveTintColor: "#94A3B8",
-        headerShown: false,
-        tabBarStyle: {
-          backgroundColor: "#fff",
-          borderTopWidth: 1,
-          borderTopColor: "#E2E8F0",
-        },
-      }}
-    >
+    <Tabs screenOptions={tabScreenOptions}>
       <Tabs.Screen
         name="dashboard"
         options={{

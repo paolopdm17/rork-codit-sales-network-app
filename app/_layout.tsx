@@ -3,13 +3,19 @@ import { Stack } from "expo-router";
 import * as SplashScreen from "expo-splash-screen";
 import React, { useEffect, Component, ReactNode } from "react";
 import { GestureHandlerRootView } from "react-native-gesture-handler";
-import { Alert, View, Text, TouchableOpacity, StyleSheet } from "react-native";
+import { View, Text, TouchableOpacity, StyleSheet } from "react-native";
 import { AuthProvider, useAuth } from "@/hooks/auth-context";
 import { DataProvider, useData } from "@/hooks/data-context";
 
 SplashScreen.preventAutoHideAsync();
 
 const queryClient = new QueryClient();
+
+const rootLayoutStyles = StyleSheet.create({
+  gestureHandler: {
+    flex: 1,
+  },
+});
 
 // Error Boundary Component
 class ErrorBoundary extends Component<
@@ -157,69 +163,30 @@ const errorStyles = StyleSheet.create({
   },
 });
 
-function RootLayoutNav() {
+// Component to sync auth user with data context
+function UserSyncWrapper({ children }: { children: ReactNode }) {
   const { user } = useAuth();
-  const { setCurrentUser, clearCorruptedData } = useData();
+  const { setCurrentUser } = useData();
 
   useEffect(() => {
-    setCurrentUser(user);
+    console.log('UserSyncWrapper: Syncing user with data context:', user?.name || 'No user');
+    // Use setTimeout to prevent blocking the UI thread
+    const timeoutId = setTimeout(() => {
+      setCurrentUser(user);
+    }, 10);
+    
+    return () => clearTimeout(timeoutId);
   }, [user, setCurrentUser]);
 
-  // Add global error handler for JSON parse errors
-  useEffect(() => {
-    const originalConsoleError = console.error;
-    const originalConsoleWarn = console.warn;
-    
-    const handleJSONError = (message: string) => {
-      if (message.includes('JSON Parse error') || 
-          message.includes('Unexpected character') ||
-          message.includes('JSON.parse') ||
-          message.includes('SyntaxError') ||
-          message.includes('Unexpected token') ||
-          message.includes('Unexpected end of JSON input')) {
-        
-        console.log('🚨 JSON Parse Error Detected:', message);
-        
-        // Auto-clear corrupted data without showing alert to avoid spam
-        setTimeout(async () => {
-          try {
-            console.log('Auto-clearing corrupted data due to JSON parse error...');
-            await clearCorruptedData();
-            console.log('✅ Corrupted data cleared automatically');
-          } catch (error) {
-            console.log('❌ Error auto-clearing corrupted data:', error);
-          }
-        }, 100);
-        
-        return true; // Indicate that we handled this error
-      }
-      return false;
-    };
-    
-    console.error = (...args) => {
-      const message = args.join(' ');
-      if (!handleJSONError(message)) {
-        originalConsoleError(...args);
-      }
-    };
-    
-    console.warn = (...args) => {
-      const message = args.join(' ');
-      if (!handleJSONError(message)) {
-        originalConsoleWarn(...args);
-      }
-    };
+  return <>{children}</>;
+}
 
-    return () => {
-      console.error = originalConsoleError;
-      console.warn = originalConsoleWarn;
-    };
-  }, [clearCorruptedData]);
-
+function RootLayoutNav() {
   return (
     <Stack screenOptions={{ headerBackTitle: "Indietro" }}>
       <Stack.Screen name="(auth)" options={{ headerShown: false }} />
       <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
+      <Stack.Screen name="index" options={{ headerShown: false }} />
       <Stack.Screen 
         name="contract-form" 
         options={{ 
@@ -255,6 +222,56 @@ function RootLayoutNav() {
           presentation: "modal" 
         }} 
       />
+      <Stack.Screen 
+        name="add-admin" 
+        options={{ 
+          title: "Aggiungi Admin",
+          presentation: "modal" 
+        }} 
+      />
+      <Stack.Screen 
+        name="add-client" 
+        options={{ 
+          title: "Aggiungi Cliente",
+          presentation: "modal" 
+        }} 
+      />
+      <Stack.Screen 
+        name="edit-client" 
+        options={{ 
+          title: "Modifica Cliente",
+          presentation: "modal" 
+        }} 
+      />
+      <Stack.Screen 
+        name="add-consultant" 
+        options={{ 
+          title: "Aggiungi Consulente",
+          presentation: "modal" 
+        }} 
+      />
+      <Stack.Screen 
+        name="edit-consultant" 
+        options={{ 
+          title: "Modifica Consulente",
+          presentation: "modal" 
+        }} 
+      />
+      <Stack.Screen 
+        name="add-deal" 
+        options={{ 
+          title: "Aggiungi Affare",
+          presentation: "modal" 
+        }} 
+      />
+      <Stack.Screen 
+        name="edit-deal" 
+        options={{ 
+          title: "Modifica Affare",
+          presentation: "modal" 
+        }} 
+      />
+      <Stack.Screen name="+not-found" />
     </Stack>
   );
 }
@@ -266,16 +283,17 @@ export default function RootLayout() {
 
   const handleErrorReset = () => {
     console.log('Error boundary reset triggered');
-    // Force a re-render by updating the key
   };
 
   return (
     <ErrorBoundary onReset={handleErrorReset}>
       <QueryClientProvider client={queryClient}>
-        <GestureHandlerRootView>
+        <GestureHandlerRootView style={rootLayoutStyles.gestureHandler}>
           <AuthProvider>
             <DataProvider>
-              <RootLayoutNav />
+              <UserSyncWrapper>
+                <RootLayoutNav />
+              </UserSyncWrapper>
             </DataProvider>
           </AuthProvider>
         </GestureHandlerRootView>

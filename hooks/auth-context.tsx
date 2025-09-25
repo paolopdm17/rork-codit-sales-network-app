@@ -245,7 +245,11 @@ export const [AuthProvider, useAuth] = createContextHook<AuthState>(() => {
       
       console.log('Logging in user:', mockUser);
       await AsyncStorage.setItem('user', JSON.stringify(mockUser));
-      setUser(mockUser);
+      
+      // Use setTimeout to prevent blocking the UI thread during login
+      setTimeout(() => {
+        setUser(mockUser);
+      }, 50);
       
     } catch (error) {
       console.error('Login error:', error);

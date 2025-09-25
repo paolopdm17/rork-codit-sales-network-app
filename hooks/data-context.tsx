@@ -1852,77 +1852,79 @@ export const [DataProvider, useData] = createContextHook<DataState>(() => {
       if (contracts.length === 0 && users.length === 0) {
         loadData(currentUser);
       } else {
-        // Load CRM data if not loaded yet
-        const loadCRMData = async () => {
-          let loadedClients: Client[] = clients;
-          let loadedConsultants: Consultant[] = consultants;
-          
-          if (clients.length === 0) {
-            const clientsData = await AsyncStorage.getItem('clients');
-            loadedClients = [];
-            if (clientsData) {
-              try {
-                const parsed = safeJSONParse(clientsData);
-                if (Array.isArray(parsed)) {
-                  loadedClients = parsed;
+        // Load CRM data if not loaded yet - but do it in a non-blocking way
+        setTimeout(async () => {
+          try {
+            let loadedClients: Client[] = clients;
+            let loadedConsultants: Consultant[] = consultants;
+            
+            if (clients.length === 0) {
+              const clientsData = await AsyncStorage.getItem('clients');
+              loadedClients = [];
+              if (clientsData) {
+                try {
+                  const parsed = safeJSONParse(clientsData);
+                  if (Array.isArray(parsed)) {
+                    loadedClients = parsed;
+                  }
+                } catch (error) {
+                  console.warn('Error parsing clients data:', error);
                 }
-              } catch (error) {
-                console.warn('Error parsing clients data:', error);
               }
+              setClients(loadedClients);
+              console.log('Loaded clients:', loadedClients.length);
             }
-            setClients(loadedClients);
-            console.log('Loaded clients:', loadedClients.length);
-          }
-          
-          if (consultants.length === 0) {
-            const consultantsData = await AsyncStorage.getItem('consultants');
-            loadedConsultants = [];
-            if (consultantsData) {
-              try {
-                const parsed = safeJSONParse(consultantsData);
-                if (Array.isArray(parsed)) {
-                  loadedConsultants = parsed;
+            
+            if (consultants.length === 0) {
+              const consultantsData = await AsyncStorage.getItem('consultants');
+              loadedConsultants = [];
+              if (consultantsData) {
+                try {
+                  const parsed = safeJSONParse(consultantsData);
+                  if (Array.isArray(parsed)) {
+                    loadedConsultants = parsed;
+                  }
+                } catch (error) {
+                  console.warn('Error parsing consultants data:', error);
                 }
-              } catch (error) {
-                console.warn('Error parsing consultants data:', error);
               }
+              setConsultants(loadedConsultants);
+              console.log('Loaded consultants:', loadedConsultants.length);
             }
-            setConsultants(loadedConsultants);
-            console.log('Loaded consultants:', loadedConsultants.length);
+            
+            // Update visible CRM data after loading
+            console.log('Updating visible CRM data after loading...');
+            if (currentUser.role === 'admin' || currentUser.role === 'master') {
+              console.log('Admin/Master - setting all CRM data as visible');
+              setVisibleClients([...loadedClients]);
+              setVisibleConsultants([...loadedConsultants]);
+            } else {
+              const connectedUserIds = getConnectedUserIds(currentUser.id, users);
+              console.log('Commercial - filtering CRM data for connected users:', connectedUserIds);
+              
+              const filteredClients = loadedClients.filter(client => {
+                const isCreatedBy = connectedUserIds.includes(client.createdBy);
+                const isAssignedTo = client.assignedTo ? connectedUserIds.includes(client.assignedTo) : false;
+                return isCreatedBy || isAssignedTo;
+              });
+              
+              const filteredConsultants = loadedConsultants.filter(consultant => {
+                const isCreatedBy = connectedUserIds.includes(consultant.createdBy);
+                const isAssignedTo = consultant.assignedTo ? connectedUserIds.includes(consultant.assignedTo) : false;
+                return isCreatedBy || isAssignedTo;
+              });
+              
+              console.log('Setting filtered clients:', filteredClients.length);
+              console.log('Setting filtered consultants:', filteredConsultants.length);
+              setVisibleClients(filteredClients);
+              setVisibleConsultants(filteredConsultants);
+            }
+          } catch (error) {
+            console.error('Error loading CRM data:', error);
           }
-          
-          // CRITICAL FIX: Immediately update visible CRM data after loading
-          console.log('Updating visible CRM data after loading...');
-          if (currentUser.role === 'admin' || currentUser.role === 'master') {
-            console.log('Admin/Master - setting all CRM data as visible');
-            setVisibleClients([...loadedClients]);
-            setVisibleConsultants([...loadedConsultants]);
-          } else {
-            const connectedUserIds = getConnectedUserIds(currentUser.id, users);
-            console.log('Commercial - filtering CRM data for connected users:', connectedUserIds);
-            
-            const filteredClients = loadedClients.filter(client => {
-              const isCreatedBy = connectedUserIds.includes(client.createdBy);
-              const isAssignedTo = client.assignedTo ? connectedUserIds.includes(client.assignedTo) : false;
-              return isCreatedBy || isAssignedTo;
-            });
-            
-            const filteredConsultants = loadedConsultants.filter(consultant => {
-              const isCreatedBy = connectedUserIds.includes(consultant.createdBy);
-              const isAssignedTo = consultant.assignedTo ? connectedUserIds.includes(consultant.assignedTo) : false;
-              return isCreatedBy || isAssignedTo;
-            });
-            
-            console.log('Setting filtered clients:', filteredClients.length);
-            console.log('Setting filtered consultants:', filteredConsultants.length);
-            setVisibleClients(filteredClients);
-            setVisibleConsultants(filteredConsultants);
-          }
-        };
+        }, 100);
         
-        loadCRMData();
-        
-        // Filter existing data and recalculate metrics
+        // Filter existing data and recalculate metrics immediately
         filterDataForUser(currentUser);
         const userMetrics = calculateMetrics(currentUser.id, contracts, users, currentUser);
         setMetrics(userMetrics);
@@ -1938,13 +1940,20 @@ export const [DataProvider, useData] = createContextHook<DataState>(() => {
       console.log('Contracts count:', contracts.length);
       console.log('Users count:', users.length);
       
-      // Always filter data for user
-      filterDataForUser(currentUser);
-      
-      // Always recalculate metrics, even if no contracts/users yet
-      const userMetrics = calculateMetrics(currentUser.id, contracts, users, currentUser);
-      console.log('Setting metrics from useEffect:', userMetrics);
-      setMetrics(userMetrics);
+      // Use setTimeout to prevent blocking the UI thread
+      setTimeout(() => {
+        try {
+          // Always filter data for user
+          filterDataForUser(currentUser);
+          
+          // Always recalculate metrics, even if no contracts/users yet
+          const userMetrics = calculateMetrics(currentUser.id, contracts, users, currentUser);
+          console.log('Setting metrics from useEffect:', userMetrics);
+          setMetrics(userMetrics);
+        } catch (error) {
+          console.error('Error in data filtering/calculation:', error);
+        }
+      }, 50);
     } else {
       console.log('=== DATA CHANGE NOT PROCESSED ===');
       console.log('User exists:', !!currentUser);
@@ -1961,41 +1970,48 @@ export const [DataProvider, useData] = createContextHook<DataState>(() => {
       console.log('Consultants count:', consultants.length);
       console.log('Deals count:', deals.length);
       
-      if (currentUser.role === 'admin' || currentUser.role === 'master') {
-        console.log('Admin/Master - setting all CRM data as visible');
-        setVisibleClients([...clients]);
-        setVisibleConsultants([...consultants]);
-        setVisibleDeals([...deals]);
-      } else {
-        const connectedUserIds = getConnectedUserIds(currentUser.id, users);
-        console.log('Commercial - filtering CRM data for connected users:', connectedUserIds);
-        
-        const filteredClients = clients.filter(client => {
-          const isCreatedBy = connectedUserIds.includes(client.createdBy);
-          const isAssignedTo = client.assignedTo ? connectedUserIds.includes(client.assignedTo) : false;
-          return isCreatedBy || isAssignedTo;
-        });
-        
-        const filteredConsultants = consultants.filter(consultant => {
-          const isCreatedBy = connectedUserIds.includes(consultant.createdBy);
-          const isAssignedTo = consultant.assignedTo ? connectedUserIds.includes(consultant.assignedTo) : false;
-          return isCreatedBy || isAssignedTo;
-        });
-        
-        console.log('Setting filtered clients:', filteredClients.length);
-        console.log('Setting filtered consultants:', filteredConsultants.length);
-        setVisibleClients(filteredClients);
-        setVisibleConsultants(filteredConsultants);
-        
-        const filteredDeals = deals.filter(deal => {
-          const isCreatedBy = connectedUserIds.includes(deal.createdBy);
-          const isAssignedTo = deal.assignedTo ? connectedUserIds.includes(deal.assignedTo) : false;
-          return isCreatedBy || isAssignedTo;
-        });
-        
-        console.log('Setting filtered deals:', filteredDeals.length);
-        setVisibleDeals(filteredDeals);
-      }
+      // Use setTimeout to prevent blocking the UI thread
+      setTimeout(() => {
+        try {
+          if (currentUser.role === 'admin' || currentUser.role === 'master') {
+            console.log('Admin/Master - setting all CRM data as visible');
+            setVisibleClients([...clients]);
+            setVisibleConsultants([...consultants]);
+            setVisibleDeals([...deals]);
+          } else {
+            const connectedUserIds = getConnectedUserIds(currentUser.id, users);
+            console.log('Commercial - filtering CRM data for connected users:', connectedUserIds);
+            
+            const filteredClients = clients.filter(client => {
+              const isCreatedBy = connectedUserIds.includes(client.createdBy);
+              const isAssignedTo = client.assignedTo ? connectedUserIds.includes(client.assignedTo) : false;
+              return isCreatedBy || isAssignedTo;
+            });
+            
+            const filteredConsultants = consultants.filter(consultant => {
+              const isCreatedBy = connectedUserIds.includes(consultant.createdBy);
+              const isAssignedTo = consultant.assignedTo ? connectedUserIds.includes(consultant.assignedTo) : false;
+              return isCreatedBy || isAssignedTo;
+            });
+            
+            console.log('Setting filtered clients:', filteredClients.length);
+            console.log('Setting filtered consultants:', filteredConsultants.length);
+            setVisibleClients(filteredClients);
+            setVisibleConsultants(filteredConsultants);
+            
+            const filteredDeals = deals.filter(deal => {
+              const isCreatedBy = connectedUserIds.includes(deal.createdBy);
+              const isAssignedTo = deal.assignedTo ? connectedUserIds.includes(deal.assignedTo) : false;
+              return isCreatedBy || isAssignedTo;
+            });
+            
+            console.log('Setting filtered deals:', filteredDeals.length);
+            setVisibleDeals(filteredDeals);
+          }
+        } catch (error) {
+          console.error('Error updating CRM visible data:', error);
+        }
+      }, 50);
     }
   }, [currentUser?.id, clients.length, consultants.length, deals.length, users.length]);
   
