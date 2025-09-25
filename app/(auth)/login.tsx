@@ -35,7 +35,7 @@ export default function LoginScreen() {
       console.log('Attempting login for:', email);
       await login(email, password);
       console.log('Login successful, redirecting to tabs');
-      router.replace("/(tabs)");
+      router.replace("/(tabs)/dashboard");
     } catch (error) {
       console.error('Login failed:', error);
       const errorMessage = error instanceof Error ? error.message : 'Credenziali non valide';
