@@ -157,7 +157,8 @@ export const [AuthProvider, useAuth] = createContextHook<AuthState>(() => {
                            email.toLowerCase().includes('paolo.dimicco') ||
                            (email.toLowerCase().includes('paolo') && email.toLowerCase().includes('micco'));
         const isMasterUser = email.toLowerCase().includes('master') || 
-                            email.toLowerCase().includes('dashboard.master');
+                            email.toLowerCase().includes('dashboard.master') ||
+                            email === 'amministrazione@codit.it';
         
         console.log('Creating new user for email:', email);
         console.log('Is admin user?', isAdminUser);
@@ -209,11 +210,11 @@ export const [AuthProvider, useAuth] = createContextHook<AuthState>(() => {
             leaderId: '2',
             createdAt: new Date(),
           };
-        } else if (email === 'master@codit.com') {
+        } else if (email === 'amministrazione@codit.it') {
           mockUser = {
             id: 'master-1',
             email,
-            name: 'Master User',
+            name: 'Amministrazione Codit',
             role: 'master',
             status: 'approved',
             level: 'managing_director',
