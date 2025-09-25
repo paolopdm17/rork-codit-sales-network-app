@@ -2,27 +2,39 @@ import { Tabs, router } from "expo-router";
 import { Home, Users, FileText, Settings, Briefcase, TrendingUp, UserCheck, Building2 } from "lucide-react-native";
 import React, { useEffect, useMemo } from "react";
 import { useAuth } from "@/hooks/auth-context";
+import { useData } from "@/hooks/data-context";
 
 export default function TabLayout() {
   const { user, isAuthenticated } = useAuth();
+  const { setCurrentUser } = useData();
 
+  // Set current user in data context when user changes
   useEffect(() => {
-    if (!isAuthenticated) {
+    if (user && isAuthenticated) {
+      console.log('Setting current user in data context:', user.name);
+      setCurrentUser(user);
+    } else if (!isAuthenticated) {
+      console.log('User not authenticated, clearing current user');
+      setCurrentUser(null);
       router.replace("/(auth)/login");
     }
-  }, [isAuthenticated]);
+  }, [user, isAuthenticated, setCurrentUser]);
 
   // Memoize role checks to prevent unnecessary re-renders
   const userRoles = useMemo(() => {
-    const isAdmin = user?.role === "admin";
-    const isMaster = user?.role === "master";
+    if (!user) {
+      return { isAdmin: false, isMaster: false, isAdminOrMaster: false, isCommercial: false };
+    }
+    
+    const isAdmin = user.role === "admin";
+    const isMaster = user.role === "master";
     const isAdminOrMaster = isAdmin || isMaster;
-    const isCommercial = user?.role === "commercial";
+    const isCommercial = user.role === "commercial";
     
     return { isAdmin, isMaster, isAdminOrMaster, isCommercial };
   }, [user?.role]);
   
-  const { isAdmin, isMaster, isAdminOrMaster, isCommercial } = userRoles;
+  const { isMaster, isAdminOrMaster, isCommercial } = userRoles;
 
   // Memoize tab screen options to prevent re-creation on every render
   const tabScreenOptions = useMemo(() => ({
@@ -35,6 +47,16 @@ export default function TabLayout() {
       borderTopColor: "#E2E8F0",
     },
   }), []);
+
+  // Show loading state while user is being authenticated
+  if (!user && isAuthenticated === undefined) {
+    return null;
+  }
+
+  // Don't render tabs if user is not authenticated
+  if (!isAuthenticated || !user) {
+    return null;
+  }
 
   return (
     <Tabs screenOptions={tabScreenOptions}>

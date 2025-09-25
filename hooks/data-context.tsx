@@ -1852,6 +1852,11 @@ export const [DataProvider, useData] = createContextHook<DataState>(() => {
       if (contracts.length === 0 && users.length === 0) {
         loadData(currentUser);
       } else {
+        // Filter existing data and recalculate metrics immediately
+        filterDataForUser(currentUser);
+        const userMetrics = calculateMetrics(currentUser.id, contracts, users, currentUser);
+        setMetrics(userMetrics);
+        
         // Load CRM data if not loaded yet - but do it in a non-blocking way
         setTimeout(async () => {
           try {
@@ -1922,15 +1927,10 @@ export const [DataProvider, useData] = createContextHook<DataState>(() => {
           } catch (error) {
             console.error('Error loading CRM data:', error);
           }
-        }, 100);
-        
-        // Filter existing data and recalculate metrics immediately
-        filterDataForUser(currentUser);
-        const userMetrics = calculateMetrics(currentUser.id, contracts, users, currentUser);
-        setMetrics(userMetrics);
+        }, 500); // Increased delay to prevent blocking
       }
     }
-  }, [currentUser]);
+  }, [currentUser?.id]); // Only depend on user ID to prevent excessive re-renders
 
   // Effect to filter data and recalculate metrics when contracts or users change
   useEffect(() => {
@@ -1940,8 +1940,8 @@ export const [DataProvider, useData] = createContextHook<DataState>(() => {
       console.log('Contracts count:', contracts.length);
       console.log('Users count:', users.length);
       
-      // Use setTimeout to prevent blocking the UI thread
-      setTimeout(() => {
+      // Use requestAnimationFrame to prevent blocking the UI thread
+      requestAnimationFrame(() => {
         try {
           // Always filter data for user
           filterDataForUser(currentUser);
@@ -1953,7 +1953,7 @@ export const [DataProvider, useData] = createContextHook<DataState>(() => {
         } catch (error) {
           console.error('Error in data filtering/calculation:', error);
         }
-      }, 50);
+      });
     } else {
       console.log('=== DATA CHANGE NOT PROCESSED ===');
       console.log('User exists:', !!currentUser);
@@ -1970,8 +1970,8 @@ export const [DataProvider, useData] = createContextHook<DataState>(() => {
       console.log('Consultants count:', consultants.length);
       console.log('Deals count:', deals.length);
       
-      // Use setTimeout to prevent blocking the UI thread
-      setTimeout(() => {
+      // Use requestAnimationFrame to prevent blocking the UI thread
+      requestAnimationFrame(() => {
         try {
           if (currentUser.role === 'admin' || currentUser.role === 'master') {
             console.log('Admin/Master - setting all CRM data as visible');
@@ -2011,19 +2011,23 @@ export const [DataProvider, useData] = createContextHook<DataState>(() => {
         } catch (error) {
           console.error('Error updating CRM visible data:', error);
         }
-      }, 50);
+      });
     }
   }, [currentUser?.id, clients.length, consultants.length, deals.length, users.length]);
   
-  // Additional effect to handle immediate updates when data changes
+  // Additional effect to handle immediate updates when data changes - throttled logging
   useEffect(() => {
-    console.log('=== VISIBLE DATA UPDATE TRIGGER ===');
-    console.log('Visible contracts:', visibleContracts.length);
-    console.log('Visible users:', visibleUsers.length);
-    console.log('Visible clients:', visibleClients.length);
-    console.log('Visible consultants:', visibleConsultants.length);
-    console.log('Visible deals:', visibleDeals.length);
-  }, [visibleContracts, visibleUsers, visibleClients, visibleConsultants, visibleDeals]);
+    const timeoutId = setTimeout(() => {
+      console.log('=== VISIBLE DATA UPDATE TRIGGER ===');
+      console.log('Visible contracts:', visibleContracts.length);
+      console.log('Visible users:', visibleUsers.length);
+      console.log('Visible clients:', visibleClients.length);
+      console.log('Visible consultants:', visibleConsultants.length);
+      console.log('Visible deals:', visibleDeals.length);
+    }, 1000); // Throttle logging to prevent spam
+    
+    return () => clearTimeout(timeoutId);
+  }, [visibleContracts.length, visibleUsers.length, visibleClients.length, visibleConsultants.length, visibleDeals.length]);
 
   return {
     contracts,
