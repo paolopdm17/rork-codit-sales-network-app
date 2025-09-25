@@ -58,7 +58,7 @@ interface DataState {
   addContract: (contract: Omit<Contract, 'id' | 'createdAt'>) => Promise<void>;
   updateContract: (contractId: string, contract: Contract) => Promise<void>;
   deleteContract: (contractId: string) => Promise<void>;
-  addUser: (user: Omit<User, 'id' | 'createdAt' | 'status' | 'approvedAt'>) => Promise<void>;
+  addUser: (user: Omit<User, 'id' | 'createdAt' | 'status' | 'approvedAt'>) => Promise<User>;
   updateUser: (userId: string, userData: User) => Promise<void>;
   deleteUser: (userId: string) => Promise<void>;
   approveUser: (userId: string, adminId: string, leaderId?: string) => Promise<void>;
@@ -1144,100 +1144,178 @@ export const [DataProvider, useData] = createContextHook<DataState>(() => {
   };
 
   const addUser = async (userData: Omit<User, 'id' | 'createdAt' | 'status' | 'approvedAt'>) => {
-    const newUser: User = {
-      ...userData,
-      id: Date.now().toString(),
-      status: 'approved',
-      createdAt: new Date(),
-      approvedAt: new Date(),
-    };
-    
-    // Ensure admin and master users have the correct level
-    if ((newUser.role === 'admin' || newUser.role === 'master') && newUser.level !== 'managing_director') {
-      newUser.level = 'managing_director';
-      console.log('Admin/Master user detected during addition - setting level to managing_director');
-    }
-    
-    // Special handling for Paolo Di Micco and any admin users - ensure they're always admin
-    if (newUser.email.toLowerCase().includes('paolo') && newUser.email.toLowerCase().includes('micco')) {
-      newUser.role = 'admin';
-      newUser.level = 'managing_director';
-      console.log('Paolo Di Micco detected during user addition - setting as admin');
-    }
-    
-    // General admin email pattern check
-    if (newUser.email.toLowerCase().includes('admin') || 
-        newUser.email.toLowerCase().includes('paolo.dimicco') ||
-        (newUser.email.toLowerCase().includes('paolo') && newUser.email.toLowerCase().includes('micco'))) {
-      newUser.role = 'admin';
-      newUser.level = 'managing_director';
-      console.log('Admin email pattern detected during user addition - setting as admin');
-    }
-    
-    console.log('=== ADDING NEW USER ===');
-    console.log('New user:', newUser);
-    console.log('Current users before adding:', users.length);
-    
-    const updatedUsers = [...users, newUser];
-    
-    // Save to AsyncStorage first
-    await AsyncStorage.setItem('users', JSON.stringify(updatedUsers));
-    
-    // Update state immediately
-    setUsers(updatedUsers);
-    
-    console.log('User added successfully. Total users now:', updatedUsers.length);
-    console.log('New user details:', { id: newUser.id, name: newUser.name, email: newUser.email });
-    
-    // CRITICAL FIX: Force immediate update of visible data for current user
-    console.log('Forcing immediate data visibility update after user addition...');
-    
-    // Update visible data immediately for current user if exists
-    if (currentUser) {
-      // ALWAYS update visible data for admin/master users to include the new user
-      if (currentUser.role === 'admin' || currentUser.role === 'master') {
-        console.log('Admin/Master user - immediately updating visible data with new user');
-        console.log('Setting visible contracts to:', contracts.length);
-        console.log('Setting visible users to:', updatedUsers.length);
-        
-        // Force re-render by creating new arrays - only show approved users
-        const allApprovedUsers = updatedUsers.filter(u => u.status === 'approved');
-        console.log('Approved users for master/admin after addition:', allApprovedUsers.length, allApprovedUsers.map(u => u.name));
-        
-        setVisibleContracts([...contracts]);
-        setVisibleUsers([...allApprovedUsers]);
-        
-        console.log('Admin/Master visible data updated immediately');
-      } else {
-        // For commercials, recalculate connections with new user list
-        const connectedUserIds = getConnectedUserIds(currentUser.id, updatedUsers);
-        console.log('Recalculating connections for', currentUser.name, ':', connectedUserIds);
-        
-        const filteredContracts = contracts.filter(contract => {
-          const isDeveloper = connectedUserIds.includes(contract.developerId);
-          const isRecruiter = contract.recruiterId ? connectedUserIds.includes(contract.recruiterId) : false;
-          return isDeveloper || isRecruiter;
-        });
-        
-        const filteredUsers = updatedUsers.filter(u => {
-          const isConnected = connectedUserIds.includes(u.id) && u.status === 'approved';
-          return isConnected;
-        });
-        
-        console.log('Updated filtered contracts:', filteredContracts.length);
-        console.log('Updated filtered users:', filteredUsers.length);
-        
-        setVisibleContracts(filteredContracts);
-        setVisibleUsers(filteredUsers);
+    try {
+      console.log('=== STARTING USER ADDITION ===');
+      console.log('User data to add:', userData);
+      console.log('Current users count before addition:', users.length);
+      
+      // Validate required fields
+      if (!userData.name || !userData.email || !userData.role) {
+        throw new Error('Nome, email e ruolo sono obbligatori');
       }
       
-      // Recalculate metrics with updated user list
-      const userMetrics = calculateMetrics(currentUser.id, contracts, updatedUsers, currentUser);
-      console.log('Updated metrics after user addition:', userMetrics);
-      setMetrics(userMetrics);
+      // Check for duplicate email
+      const existingUser = users.find(u => u.email.toLowerCase() === userData.email.toLowerCase());
+      if (existingUser) {
+        throw new Error(`Un utente con l'email ${userData.email} esiste già`);
+      }
+      
+      // Generate unique ID with timestamp and random component
+      const uniqueId = `${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
+      
+      const newUser: User = {
+        ...userData,
+        id: uniqueId,
+        status: 'approved',
+        createdAt: new Date(),
+        approvedAt: new Date(),
+      };
+      
+      // Ensure admin and master users have the correct level
+      if ((newUser.role === 'admin' || newUser.role === 'master') && newUser.level !== 'managing_director') {
+        newUser.level = 'managing_director';
+        console.log('Admin/Master user detected during addition - setting level to managing_director');
+      }
+      
+      // Special handling for Paolo Di Micco and any admin users - ensure they're always admin
+      if (newUser.email.toLowerCase().includes('paolo') && newUser.email.toLowerCase().includes('micco')) {
+        newUser.role = 'admin';
+        newUser.level = 'managing_director';
+        console.log('Paolo Di Micco detected during user addition - setting as admin');
+      }
+      
+      // General admin email pattern check
+      if (newUser.email.toLowerCase().includes('admin') || 
+          newUser.email.toLowerCase().includes('paolo.dimicco') ||
+          (newUser.email.toLowerCase().includes('paolo') && newUser.email.toLowerCase().includes('micco'))) {
+        newUser.role = 'admin';
+        newUser.level = 'managing_director';
+        console.log('Admin email pattern detected during user addition - setting as admin');
+      }
+      
+      console.log('Final new user object:', newUser);
+      
+      // Create updated users array
+      const updatedUsers = [...users, newUser];
+      console.log('Updated users array length:', updatedUsers.length);
+      
+      // Try to save to Supabase first if online
+      let supabaseSuccess = false;
+      if (isOnline) {
+        try {
+          console.log('Attempting to save user to Supabase...');
+          const supabaseUser = await SupabaseService.createUser(newUser);
+          console.log('✅ User saved to Supabase successfully:', supabaseUser.id);
+          // Update the user with the Supabase-generated data if different
+          if (supabaseUser.id !== newUser.id) {
+            newUser.id = supabaseUser.id;
+            updatedUsers[updatedUsers.length - 1] = newUser;
+          }
+          supabaseSuccess = true;
+        } catch (supabaseError) {
+          console.warn('⚠️ Failed to save user to Supabase, continuing with local storage:', supabaseError);
+          // Continue with local storage - don't fail the entire operation
+        }
+      } else {
+        console.log('📴 Offline mode - saving to local storage only');
+      }
+      
+      // Save to AsyncStorage (always do this as backup)
+      console.log('Saving updated users to AsyncStorage...');
+      await AsyncStorage.setItem('users', JSON.stringify(updatedUsers));
+      console.log('✅ Users saved to AsyncStorage successfully');
+      
+      // Update state immediately
+      console.log('Updating users state...');
+      setUsers(updatedUsers);
+      
+      console.log('✅ User added successfully!');
+      console.log('- User ID:', newUser.id);
+      console.log('- User name:', newUser.name);
+      console.log('- User email:', newUser.email);
+      console.log('- Total users now:', updatedUsers.length);
+      console.log('- Supabase sync:', supabaseSuccess ? '✅ Success' : '⚠️ Failed (local only)');
+      
+      // CRITICAL: Force immediate update of visible data for current user
+      console.log('🔄 Forcing immediate data visibility update...');
+      
+      if (currentUser) {
+        console.log('Current user found:', currentUser.name, '- Role:', currentUser.role);
+        
+        // Update visible data based on user role
+        if (currentUser.role === 'admin' || currentUser.role === 'master') {
+          console.log('👑 Admin/Master user - showing all data');
+          
+          // Force re-render by creating new arrays - only show approved users
+          const allApprovedUsers = updatedUsers.filter(u => u.status === 'approved');
+          console.log('📊 Setting visible data:');
+          console.log('- Contracts:', contracts.length);
+          console.log('- Approved users:', allApprovedUsers.length);
+          console.log('- User names:', allApprovedUsers.map(u => u.name));
+          
+          setVisibleContracts([...contracts]);
+          setVisibleUsers([...allApprovedUsers]);
+          
+          console.log('✅ Admin/Master visible data updated');
+        } else {
+          console.log('👤 Commercial user - filtering data based on connections');
+          
+          // For commercials, recalculate connections with new user list
+          const connectedUserIds = getConnectedUserIds(currentUser.id, updatedUsers);
+          console.log('🔗 Connected user IDs for', currentUser.name, ':', connectedUserIds);
+          
+          const filteredContracts = contracts.filter(contract => {
+            const isDeveloper = connectedUserIds.includes(contract.developerId);
+            const isRecruiter = contract.recruiterId ? connectedUserIds.includes(contract.recruiterId) : false;
+            return isDeveloper || isRecruiter;
+          });
+          
+          const filteredUsers = updatedUsers.filter(u => {
+            const isConnected = connectedUserIds.includes(u.id) && u.status === 'approved';
+            return isConnected;
+          });
+          
+          console.log('📊 Setting filtered data:');
+          console.log('- Filtered contracts:', filteredContracts.length);
+          console.log('- Filtered users:', filteredUsers.length);
+          
+          setVisibleContracts(filteredContracts);
+          setVisibleUsers(filteredUsers);
+          
+          console.log('✅ Commercial visible data updated');
+        }
+        
+        // Recalculate metrics with updated user list
+        console.log('📈 Recalculating metrics...');
+        const userMetrics = calculateMetrics(currentUser.id, contracts, updatedUsers, currentUser);
+        console.log('📊 Updated metrics:', {
+          personalRevenue: userMetrics.personalRevenue,
+          teamRevenue: userMetrics.teamRevenue,
+          totalCommission: userMetrics.totalCommission
+        });
+        setMetrics(userMetrics);
+        
+        console.log('✅ Metrics updated successfully');
+      } else {
+        console.log('⚠️ No current user found - skipping data filtering');
+      }
+      
+      console.log('=== USER ADDITION COMPLETED SUCCESSFULLY ===');
+      
+      // Return the created user for confirmation
+      return newUser;
+      
+    } catch (error) {
+      console.error('❌ ERROR DURING USER ADDITION:', error);
+      console.error('Error details:', {
+        message: error instanceof Error ? error.message : 'Unknown error',
+        userData: userData,
+        currentUsersCount: users.length
+      });
+      
+      // Re-throw the error so the UI can handle it
+      throw error;
     }
-    
-    console.log('=== USER ADDITION COMPLETE ===');
   };
 
   const updateUser = async (userId: string, userData: User) => {

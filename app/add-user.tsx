@@ -86,9 +86,10 @@ export default function AddUserScreen() {
         setCurrentUser(user);
       }
       
-      await addUser(finalFormData);
+      const createdUser = await addUser(finalFormData);
       
-      console.log('User added successfully, refreshing data...');
+      console.log('User added successfully:', createdUser);
+      console.log('Refreshing data to ensure all dashboards are updated...');
       
       // Force refresh data to ensure all dashboards are updated
       await refreshData(user);
@@ -97,7 +98,7 @@ export default function AddUserScreen() {
       
       Alert.alert(
         "Successo", 
-        "Commerciale aggiunto con successo",
+        `Commerciale ${createdUser.name} aggiunto con successo`,
         [{ text: "OK", onPress: () => router.back() }]
       );
     } catch (error) {
