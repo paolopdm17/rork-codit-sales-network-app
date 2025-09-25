@@ -22,6 +22,28 @@ export default function ContractsScreen() {
   const isMaster = user?.role === "master";
   const isAdminOrMaster = isAdmin || isMaster;
 
+  console.log('🔒 ContractsScreen access check:', {
+    userName: user?.name,
+    userRole: user?.role,
+    isMaster,
+    isAdminOrMaster,
+    shouldHaveAccess: isMaster
+  });
+
+  // Protezione aggiuntiva: solo i master possono accedere a questa pagina
+  if (!user || user.role !== 'master') {
+    return (
+      <View style={[styles.container, { justifyContent: 'center', alignItems: 'center' }]}>
+        <Text style={{ fontSize: 18, color: '#EF4444', textAlign: 'center', marginHorizontal: 20 }}>
+          ⚠️ Accesso Negato
+        </Text>
+        <Text style={{ fontSize: 14, color: '#64748B', textAlign: 'center', marginHorizontal: 20, marginTop: 8 }}>
+          Solo i Master possono accedere alla gestione contratti.
+        </Text>
+      </View>
+    );
+  }
+
   const onRefresh = async () => {
     setRefreshing(true);
     await refreshData(user);

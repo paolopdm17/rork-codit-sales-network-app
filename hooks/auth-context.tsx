@@ -196,6 +196,7 @@ export const [AuthProvider, useAuth] = createContextHook<AuthState>(() => {
             adminId: '1',
             createdAt: new Date(),
           };
+          console.log('👤 Creating Luca Bianchi as COMMERCIAL:', mockUser);
         } else if (email === 'senior@codit.com') {
           mockUser = {
             id: '3',

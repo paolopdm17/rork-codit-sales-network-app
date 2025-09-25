@@ -33,12 +33,17 @@ export default function TabLayout() {
     const isAdminOrMaster = isAdmin || isMaster;
     const isCommercial = user.role === "commercial";
     
-    console.log('User role check:', {
+    console.log('🔍 DETAILED User role check:', {
+      userName: user.name,
+      userEmail: user.email,
       userRole: user.role,
+      userLevel: user.level,
       isAdmin,
       isMaster,
       isAdminOrMaster,
-      isCommercial
+      isCommercial,
+      shouldSeeContracts: isMaster,
+      shouldSeeMyContracts: isCommercial
     });
     
     return { isAdmin, isMaster, isAdminOrMaster, isCommercial };
@@ -70,10 +75,16 @@ export default function TabLayout() {
     return null;
   }
 
-  console.log('TabLayout: Rendering tabs for user:', {
+  console.log('🎯 TabLayout: Rendering tabs for user:', {
     name: user.name,
+    email: user.email,
     role: user.role,
     level: user.level,
+    roleChecks: {
+      isMaster,
+      isAdminOrMaster,
+      isCommercial
+    },
     visibleTabs: {
       dashboard: true,
       users: isAdminOrMaster,
@@ -109,7 +120,7 @@ export default function TabLayout() {
       )}
       
       {/* Contratti - Solo Master */}
-      {isMaster && (
+      {isMaster && user?.role === 'master' && (
         <Tabs.Screen
           name="contracts"
           options={{

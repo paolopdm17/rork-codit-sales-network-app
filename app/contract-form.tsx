@@ -28,6 +28,32 @@ export default function ContractFormScreen() {
   const [recruiterId, setRecruiterId] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
 
+  console.log('🔒 ContractFormScreen access check:', {
+    userName: user?.name,
+    userRole: user?.role,
+    shouldHaveAccess: user?.role === 'master'
+  });
+
+  // Protezione aggiuntiva: solo i master possono creare contratti
+  if (!user || user.role !== 'master') {
+    return (
+      <View style={[styles.container, { justifyContent: 'center', alignItems: 'center', padding: 20 }]}>
+        <Text style={{ fontSize: 18, color: '#EF4444', textAlign: 'center', marginBottom: 8 }}>
+          ⚠️ Accesso Negato
+        </Text>
+        <Text style={{ fontSize: 14, color: '#64748B', textAlign: 'center', marginBottom: 20 }}>
+          Solo i Master possono creare nuovi contratti.
+        </Text>
+        <TouchableOpacity
+          style={[styles.button, styles.cancelButton]}
+          onPress={() => router.back()}
+        >
+          <Text style={styles.cancelButtonText}>Torna Indietro</Text>
+        </TouchableOpacity>
+      </View>
+    );
+  }
+
   // Include both admin and commercial users as potential developers
   // Also include the current user if they're not already in the list
   const availableUsers = visibleUsers.filter(
