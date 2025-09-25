@@ -33,6 +33,14 @@ export default function TabLayout() {
     const isAdminOrMaster = isAdmin || isMaster;
     const isCommercial = user.role === "commercial";
     
+    console.log('User role check:', {
+      userRole: user.role,
+      isAdmin,
+      isMaster,
+      isAdminOrMaster,
+      isCommercial
+    });
+    
     return { isAdmin, isMaster, isAdminOrMaster, isCommercial };
   }, [user]);
   
@@ -52,16 +60,35 @@ export default function TabLayout() {
 
   // Show loading state while user is being authenticated
   if (isLoading) {
+    console.log('TabLayout: Still loading user authentication...');
     return null;
   }
 
   // Don't render tabs if user is not authenticated
   if (!isAuthenticated || !user) {
+    console.log('TabLayout: User not authenticated or missing:', { isAuthenticated, hasUser: !!user });
     return null;
   }
 
+  console.log('TabLayout: Rendering tabs for user:', {
+    name: user.name,
+    role: user.role,
+    level: user.level,
+    visibleTabs: {
+      dashboard: true,
+      users: isAdminOrMaster,
+      contracts: isAdminOrMaster,
+      myContracts: isCommercial,
+      myTeam: isCommercial,
+      teamEarnings: isMaster,
+      crm: true,
+      profile: true
+    }
+  });
+
   return (
     <Tabs screenOptions={tabScreenOptions}>
+      {/* Dashboard - Visibile a tutti */}
       <Tabs.Screen
         name="dashboard"
         options={{
@@ -69,6 +96,8 @@ export default function TabLayout() {
           tabBarIcon: ({ color }) => <Home color={color} size={24} />,
         }}
       />
+      
+      {/* Utenti - Solo Master e Admin */}
       {isAdminOrMaster && (
         <Tabs.Screen
           name="users"
@@ -78,6 +107,8 @@ export default function TabLayout() {
           }}
         />
       )}
+      
+      {/* Contratti - Solo Master e Admin */}
       {isAdminOrMaster && (
         <Tabs.Screen
           name="contracts"
@@ -87,7 +118,9 @@ export default function TabLayout() {
           }}
         />
       )}
-      {!isAdminOrMaster && (
+      
+      {/* I Miei Contratti - Solo Commercial */}
+      {isCommercial && (
         <Tabs.Screen
           name="my-contracts"
           options={{
@@ -96,6 +129,8 @@ export default function TabLayout() {
           }}
         />
       )}
+      
+      {/* Il Mio Team - Solo Commercial */}
       {isCommercial && (
         <Tabs.Screen
           name="my-team"
@@ -105,6 +140,8 @@ export default function TabLayout() {
           }}
         />
       )}
+      
+      {/* Guadagni Team - Solo Master */}
       {isMaster && (
         <Tabs.Screen
           name="team-earnings"
@@ -114,6 +151,8 @@ export default function TabLayout() {
           }}
         />
       )}
+      
+      {/* CRM - Visibile a tutti */}
       <Tabs.Screen
         name="crm"
         options={{
@@ -121,6 +160,8 @@ export default function TabLayout() {
           tabBarIcon: ({ color }) => <Building2 color={color} size={24} />,
         }}
       />
+      
+      {/* Profilo - Visibile a tutti */}
       <Tabs.Screen
         name="profile"
         options={{
