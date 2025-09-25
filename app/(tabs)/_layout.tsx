@@ -1,22 +1,24 @@
-import { Tabs, router } from "expo-router";
+import { Tabs } from "expo-router";
 import { Home, Users, FileText, Settings, Briefcase, TrendingUp, UserCheck, Building2 } from "lucide-react-native";
-import React, { useEffect, useMemo } from "react";
+import React, { useEffect, useMemo, useRef } from "react";
 import { useAuth } from "@/hooks/auth-context";
 import { useData } from "@/hooks/data-context";
 
 export default function TabLayout() {
-  const { user, isAuthenticated } = useAuth();
+  const { user, isAuthenticated, isLoading } = useAuth();
   const { setCurrentUser } = useData();
+  const hasSetUser = useRef(false);
 
   // Set current user in data context when user changes
   useEffect(() => {
-    if (user && isAuthenticated) {
+    if (user && isAuthenticated && !hasSetUser.current) {
       console.log('Setting current user in data context:', user.name);
       setCurrentUser(user);
-    } else if (!isAuthenticated) {
+      hasSetUser.current = true;
+    } else if (!user && !isAuthenticated && hasSetUser.current) {
       console.log('User not authenticated, clearing current user');
       setCurrentUser(null);
-      router.replace("/(auth)/login");
+      hasSetUser.current = false;
     }
   }, [user, isAuthenticated, setCurrentUser]);
 
@@ -32,7 +34,7 @@ export default function TabLayout() {
     const isCommercial = user.role === "commercial";
     
     return { isAdmin, isMaster, isAdminOrMaster, isCommercial };
-  }, [user?.role]);
+  }, [user]);
   
   const { isMaster, isAdminOrMaster, isCommercial } = userRoles;
 
@@ -49,7 +51,7 @@ export default function TabLayout() {
   }), []);
 
   // Show loading state while user is being authenticated
-  if (!user && isAuthenticated === undefined) {
+  if (isLoading) {
     return null;
   }
 
@@ -67,51 +69,46 @@ export default function TabLayout() {
           tabBarIcon: ({ color }) => <Home color={color} size={24} />,
         }}
       />
-      {isAdminOrMaster && (
-        <Tabs.Screen
-          name="users"
-          options={{
-            title: "Utenti",
-            tabBarIcon: ({ color }) => <Users color={color} size={24} />,
-          }}
-        />
-      )}
-      {isAdminOrMaster && (
-        <Tabs.Screen
-          name="contracts"
-          options={{
-            title: "Contratti",
-            tabBarIcon: ({ color }) => <FileText color={color} size={24} />,
-          }}
-        />
-      )}
-      {!isAdminOrMaster && (
-        <Tabs.Screen
-          name="my-contracts"
-          options={{
-            title: "I Miei Contratti",
-            tabBarIcon: ({ color }) => <Briefcase color={color} size={24} />,
-          }}
-        />
-      )}
-      {isCommercial && (
-        <Tabs.Screen
-          name="my-team"
-          options={{
-            title: "Il Mio Team",
-            tabBarIcon: ({ color }) => <UserCheck color={color} size={24} />,
-          }}
-        />
-      )}
-      {isMaster && (
-        <Tabs.Screen
-          name="team-earnings"
-          options={{
-            title: "Guadagni Team",
-            tabBarIcon: ({ color }) => <TrendingUp color={color} size={24} />,
-          }}
-        />
-      )}
+      <Tabs.Screen
+        name="users"
+        options={{
+          title: "Utenti",
+          tabBarIcon: ({ color }) => <Users color={color} size={24} />,
+          href: isAdminOrMaster ? "/users" : null,
+        }}
+      />
+      <Tabs.Screen
+        name="contracts"
+        options={{
+          title: "Contratti",
+          tabBarIcon: ({ color }) => <FileText color={color} size={24} />,
+          href: isAdminOrMaster ? "/contracts" : null,
+        }}
+      />
+      <Tabs.Screen
+        name="my-contracts"
+        options={{
+          title: "I Miei Contratti",
+          tabBarIcon: ({ color }) => <Briefcase color={color} size={24} />,
+          href: !isAdminOrMaster ? "/my-contracts" : null,
+        }}
+      />
+      <Tabs.Screen
+        name="my-team"
+        options={{
+          title: "Il Mio Team",
+          tabBarIcon: ({ color }) => <UserCheck color={color} size={24} />,
+          href: isCommercial ? "/my-team" : null,
+        }}
+      />
+      <Tabs.Screen
+        name="team-earnings"
+        options={{
+          title: "Guadagni Team",
+          tabBarIcon: ({ color }) => <TrendingUp color={color} size={24} />,
+          href: isMaster ? "/team-earnings" : null,
+        }}
+      />
       <Tabs.Screen
         name="crm"
         options={{
