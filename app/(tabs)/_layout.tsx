@@ -4,6 +4,7 @@ import React, { useEffect, useMemo, useRef } from "react";
 import { Platform } from "react-native";
 import { useAuth } from "@/hooks/auth-context";
 import { useData } from "@/hooks/data-context";
+import { WEB_CONFIG } from "@/constants/web-config";
 
 export default function TabLayout() {
   const { user, isAuthenticated, isLoading } = useAuth();
@@ -61,7 +62,7 @@ export default function TabLayout() {
       backgroundColor: "#fff",
       borderTopWidth: 1,
       borderTopColor: "#E2E8F0",
-      // Web-specific fixes
+      // Web-specific fixes for better compatibility
       ...(Platform.OS === 'web' && {
         position: 'relative' as const,
         elevation: 0,
@@ -72,13 +73,19 @@ export default function TabLayout() {
     ...(Platform.OS === 'web' && {
       tabBarLabelStyle: {
         fontSize: 11,
-        fontWeight: '600',
-        marginTop: 2,
+        fontWeight: '600' as const,
       },
       tabBarIconStyle: {
         marginBottom: 0,
       },
+      // Ensure tabs are clickable on web
+      tabBarItemStyle: {
+        ...WEB_CONFIG.STYLES.CURSOR_POINTER,
+      },
     }),
+    // Animation settings for better web performance
+    animationEnabled: Platform.OS !== 'web',
+    swipeEnabled: Platform.OS !== 'web',
   }), []);
 
   // Memoize tab options to prevent re-creation on every render
@@ -143,6 +150,12 @@ export default function TabLayout() {
     return null;
   }
 
+  // Web-specific: Add a small delay to ensure proper rendering
+  if (Platform.OS === 'web' && !hasSetUser.current) {
+    console.log('TabLayout: Waiting for user to be set on web...');
+    return null;
+  }
+
   console.log('🎯 TabLayout: Rendering tabs for user:', {
     name: user.name,
     email: user.email,
@@ -174,54 +187,44 @@ export default function TabLayout() {
       />
       
       {/* Users - Admin/Master only */}
-      <Tabs.Screen
-        name="users"
-        options={{
-          ...tabOptions.users,
-          // Hide tab if user doesn't have access
-          tabBarButton: isAdminOrMaster ? undefined : () => null,
-        }}
-      />
+      {isAdminOrMaster && (
+        <Tabs.Screen
+          name="users"
+          options={tabOptions.users}
+        />
+      )}
       
       {/* Contracts - Master only */}
-      <Tabs.Screen
-        name="contracts"
-        options={{
-          ...tabOptions.contracts,
-          // Hide tab if user doesn't have access
-          tabBarButton: (isMaster && user?.role === 'master') ? undefined : () => null,
-        }}
-      />
+      {(isMaster && user?.role === 'master') && (
+        <Tabs.Screen
+          name="contracts"
+          options={tabOptions.contracts}
+        />
+      )}
       
       {/* My Contracts - Commercial only */}
-      <Tabs.Screen
-        name="my-contracts"
-        options={{
-          ...tabOptions['my-contracts'],
-          // Hide tab if user doesn't have access
-          tabBarButton: isCommercial ? undefined : () => null,
-        }}
-      />
+      {isCommercial && (
+        <Tabs.Screen
+          name="my-contracts"
+          options={tabOptions['my-contracts']}
+        />
+      )}
       
       {/* My Team - Commercial only */}
-      <Tabs.Screen
-        name="my-team"
-        options={{
-          ...tabOptions['my-team'],
-          // Hide tab if user doesn't have access
-          tabBarButton: isCommercial ? undefined : () => null,
-        }}
-      />
+      {isCommercial && (
+        <Tabs.Screen
+          name="my-team"
+          options={tabOptions['my-team']}
+        />
+      )}
       
       {/* Team Earnings - Master only */}
-      <Tabs.Screen
-        name="team-earnings"
-        options={{
-          ...tabOptions['team-earnings'],
-          // Hide tab if user doesn't have access
-          tabBarButton: isMaster ? undefined : () => null,
-        }}
-      />
+      {isMaster && (
+        <Tabs.Screen
+          name="team-earnings"
+          options={tabOptions['team-earnings']}
+        />
+      )}
       
       {/* CRM - Always visible */}
       <Tabs.Screen

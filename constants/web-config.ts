@@ -2,11 +2,11 @@ import { Platform } from 'react-native';
 
 // Web-specific configuration for better performance and compatibility
 export const WEB_CONFIG = {
-  // Reduce animation durations on web
-  ANIMATION_DURATION: Platform.OS === 'web' ? 200 : 300,
+  // Reduce animation durations on web for better performance
+  ANIMATION_DURATION: Platform.OS === 'web' ? 150 : 300,
   
   // Faster loading timeouts on web
-  LOADING_TIMEOUT: Platform.OS === 'web' ? 50 : 100,
+  LOADING_TIMEOUT: Platform.OS === 'web' ? 10 : 100,
   
   // Reduced debounce times for better responsiveness
   SEARCH_DEBOUNCE: Platform.OS === 'web' ? 150 : 300,
@@ -71,9 +71,15 @@ export const webHelpers = {
     }
   },
   
-  // Platform-specific timeout
+  // Platform-specific timeout with better web performance
   timeout: (callback: () => void, delay?: number) => {
     const actualDelay = delay || WEB_CONFIG.LOADING_TIMEOUT;
+    if (Platform.OS === 'web') {
+      // Use requestAnimationFrame for better web performance when possible
+      if (actualDelay <= 16) {
+        return requestAnimationFrame(callback) as any;
+      }
+    }
     return setTimeout(callback, actualDelay);
   },
   

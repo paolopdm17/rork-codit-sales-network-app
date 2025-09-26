@@ -95,7 +95,7 @@ export const [AuthProvider, useAuth] = createContextHook<AuthState>(() => {
         console.error('Error loading user:', error);
       } finally {
         // Use shorter timeout on web for better performance
-        const timeout = Platform.OS === 'web' ? 50 : 100;
+        const timeout = Platform.OS === 'web' ? 10 : 100;
         setTimeout(() => setIsLoading(false), timeout);
       }
     };
