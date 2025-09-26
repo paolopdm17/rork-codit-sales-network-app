@@ -536,20 +536,18 @@ export const [DataProvider, useData] = createContextHook<DataState>(() => {
           let needsUpdate = false;
           const updatedUser = { ...userExistsInList };
           
-          // Special handling for Paolo Di Micco and any admin users - ensure they're always admin
-          if (currentUser.email.toLowerCase().includes('paolo') && currentUser.email.toLowerCase().includes('micco')) {
-            if (updatedUser.role !== 'admin' || updatedUser.level !== 'managing_director') {
-              updatedUser.role = 'admin';
+          // Special handling for master account
+          if (currentUser.email.toLowerCase() === 'amministrazione@codit.it') {
+            if (updatedUser.role !== 'master' || updatedUser.level !== 'managing_director') {
+              updatedUser.role = 'master';
               updatedUser.level = 'managing_director';
               needsUpdate = true;
-              console.log('Updating Paolo Di Micco to admin status in database');
+              console.log('Updating amministrazione@codit.it to master status in database');
             }
           }
           
           // General admin email pattern check
-          if (currentUser.email.toLowerCase().includes('admin') || 
-              currentUser.email.toLowerCase().includes('paolo.dimicco') ||
-              (currentUser.email.toLowerCase().includes('paolo') && currentUser.email.toLowerCase().includes('micco'))) {
+          if (currentUser.email.toLowerCase().includes('admin')) {
             if (updatedUser.role !== 'admin' || updatedUser.level !== 'managing_director') {
               updatedUser.role = 'admin';
               updatedUser.level = 'managing_director';
@@ -724,7 +722,7 @@ export const [DataProvider, useData] = createContextHook<DataState>(() => {
     
     // Ensure admin and master always have managing_director level
     let currentLevel = userForCalculation?.level || 'junior';
-    if (userForCalculation?.email === 'admin@codit.com' || userForCalculation?.role === 'admin' || userForCalculation?.role === 'master') {
+    if (userForCalculation?.email === 'amministrazione@codit.it' || userForCalculation?.email === 'admin@codit.com' || userForCalculation?.role === 'admin' || userForCalculation?.role === 'master') {
       currentLevel = 'managing_director';
       console.log('Admin/Master detected, setting level to managing_director');
     }
@@ -1177,17 +1175,15 @@ export const [DataProvider, useData] = createContextHook<DataState>(() => {
         console.log('Admin/Master user detected during addition - setting level to managing_director');
       }
       
-      // Special handling for Paolo Di Micco and any admin users - ensure they're always admin
-      if (newUser.email.toLowerCase().includes('paolo') && newUser.email.toLowerCase().includes('micco')) {
-        newUser.role = 'admin';
+      // Special handling for master account
+      if (newUser.email.toLowerCase() === 'amministrazione@codit.it') {
+        newUser.role = 'master';
         newUser.level = 'managing_director';
-        console.log('Paolo Di Micco detected during user addition - setting as admin');
+        console.log('amministrazione@codit.it detected during user addition - setting as master');
       }
       
       // General admin email pattern check
-      if (newUser.email.toLowerCase().includes('admin') || 
-          newUser.email.toLowerCase().includes('paolo.dimicco') ||
-          (newUser.email.toLowerCase().includes('paolo') && newUser.email.toLowerCase().includes('micco'))) {
+      if (newUser.email.toLowerCase().includes('admin')) {
         newUser.role = 'admin';
         newUser.level = 'managing_director';
         console.log('Admin email pattern detected during user addition - setting as admin');
@@ -2153,203 +2149,20 @@ const generateMockUsers = (): User[] => {
   return [
     {
       id: '1',
-      email: 'admin@codit.com',
-      name: 'Mario Rossi',
-      role: 'admin',
+      email: 'amministrazione@codit.it',
+      name: 'Amministratore',
+      role: 'master',
       status: 'approved',
       level: 'managing_director',
       createdAt: new Date('2024-01-01'),
-    },
-    {
-      id: '2',
-      email: 'leader@codit.com',
-      name: 'Luca Bianchi',
-      role: 'commercial',
-      status: 'approved',
-      level: 'team_leader',
-      adminId: '1',
-      createdAt: new Date('2024-01-15'),
-    },
-    {
-      id: '3',
-      email: 'senior@codit.com',
-      name: 'Anna Verdi',
-      role: 'commercial',
-      status: 'approved',
-      level: 'senior',
-      adminId: '1',
-      leaderId: '2',
-      createdAt: new Date('2024-02-01'),
-    },
-    {
-      id: '4',
-      email: 'antonio.baudo@codit.com',
-      name: 'Antonio Baudo',
-      role: 'commercial',
-      status: 'approved',
-      level: 'junior',
-      adminId: '1',
-      leaderId: '2',
-      createdAt: new Date('2024-03-01'),
-    },
-    {
-      id: '5',
-      email: 'andrew.ferro@codit.com',
-      name: 'Andrew Ferro',
-      role: 'commercial',
-      status: 'approved',
-      level: 'managing_director',
-      adminId: '1',
-      // No leaderId - reports directly to Master
-      createdAt: new Date('2024-04-01'),
     },
   ];
 };
 
 const generateMockContracts = (): Contract[] => {
-  const now = new Date();
-  const currentYear = now.getFullYear();
-  const currentMonth = now.getMonth();
-  
-  return [
-    {
-      id: '1',
-      name: 'Contratto E-commerce Platform',
-      date: new Date(currentYear, currentMonth - 2, 5),
-      grossMargin: 36000,
-      monthlyMargin: 3000,
-      duration: 12,
-      developerId: '2',
-      createdBy: '1',
-      createdAt: new Date(currentYear, currentMonth - 2, 5),
-    },
-    {
-      id: '2',
-      name: 'App Mobile Banking',
-      date: new Date(currentYear, currentMonth - 1, 15),
-      grossMargin: 24000,
-      monthlyMargin: 4000,
-      duration: 6,
-      developerId: '3',
-      recruiterId: '2',
-      createdBy: '1',
-      createdAt: new Date(currentYear, currentMonth - 1, 15),
-    },
-    {
-      id: '3',
-      name: 'Sistema Gestionale CRM',
-      date: new Date(currentYear, currentMonth, 1),
-      grossMargin: 60000,
-      monthlyMargin: 2500,
-      duration: 24,
-      developerId: '2',
-      createdBy: '1',
-      createdAt: new Date(currentYear, currentMonth, 1),
-    },
-    {
-      id: '4',
-      name: 'Portale Web Aziendale',
-      date: new Date(currentYear, currentMonth, 10),
-      grossMargin: 180000, // Increased to €180,000 total (€15,000/month)
-      monthlyMargin: 15000, // €15,000/month to meet senior requirements
-      duration: 12,
-      developerId: '4', // Antonio Baudo
-      createdBy: '1',
-      createdAt: new Date(currentYear, currentMonth, 10),
-    },
-    {
-      id: '5',
-      name: 'Consulenza Enterprise',
-      date: new Date(currentYear, currentMonth - 1, 1),
-      grossMargin: 48000,
-      monthlyMargin: 4000,
-      duration: 12,
-      developerId: '1', // Admin Mario Rossi
-      createdBy: '1',
-      createdAt: new Date(currentYear, currentMonth - 1, 1),
-    },
-    {
-      id: '6',
-      name: 'Progetto Mobile App',
-      date: new Date(currentYear, currentMonth, 15),
-      grossMargin: 72000,
-      monthlyMargin: 6000,
-      duration: 12,
-      developerId: '5', // Andrew Ferro
-      createdBy: '1',
-      createdAt: new Date(currentYear, currentMonth, 15),
-    },
-  ];
+  return [];
 };
 
 const generateMockDeals = (): Deal[] => {
-  const now = new Date();
-  const currentYear = now.getFullYear();
-  const currentMonth = now.getMonth();
-  
-  return [
-    {
-      id: '1',
-      title: 'Sviluppo App Mobile per Banca',
-      clientId: 'client-1',
-      clientName: 'Banca Nazionale',
-      consultantId: 'consultant-1',
-      consultantName: 'Marco Sviluppatore',
-      value: 45000,
-      status: 'final_interview',
-      probability: 75,
-      expectedCloseDate: new Date(currentYear, currentMonth + 1, 15),
-      notes: 'Cliente molto interessato, in fase di negoziazione finale',
-      createdBy: '1',
-      assignedTo: '2',
-      createdAt: new Date(currentYear, currentMonth - 1, 10),
-      updatedAt: new Date(currentYear, currentMonth, 5),
-    },
-    {
-      id: '2',
-      title: 'Consulenza CRM Enterprise',
-      clientId: 'client-2',
-      clientName: 'TechCorp Solutions',
-      value: 28000,
-      status: 'initial_interview',
-      probability: 60,
-      expectedCloseDate: new Date(currentYear, currentMonth + 2, 1),
-      notes: 'Proposta inviata, in attesa di feedback',
-      createdBy: '2',
-      assignedTo: '3',
-      createdAt: new Date(currentYear, currentMonth, 1),
-      updatedAt: new Date(currentYear, currentMonth, 3),
-    },
-    {
-      id: '3',
-      title: 'Portale E-commerce B2B',
-      clientId: 'client-3',
-      clientName: 'Retail Group',
-      consultantId: 'consultant-2',
-      consultantName: 'Anna Frontend',
-      value: 65000,
-      status: 'initial_interview',
-      probability: 40,
-      expectedCloseDate: new Date(currentYear, currentMonth + 3, 20),
-      notes: 'Prima proposta, cliente sta valutando altre opzioni',
-      createdBy: '3',
-      createdAt: new Date(currentYear, currentMonth, 8),
-      updatedAt: new Date(currentYear, currentMonth, 12),
-    },
-    {
-      id: '4',
-      title: 'Sistema Gestionale HR',
-      clientId: 'client-4',
-      clientName: 'Human Resources Inc',
-      value: 38000,
-      status: 'final_interview',
-      probability: 85,
-      expectedCloseDate: new Date(currentYear, currentMonth, 25),
-      notes: 'Quasi chiuso, ultimi dettagli contrattuali',
-      createdBy: '4',
-      assignedTo: '2',
-      createdAt: new Date(currentYear, currentMonth - 2, 15),
-      updatedAt: new Date(currentYear, currentMonth, 18),
-    },
-  ];
+  return [];
 };
