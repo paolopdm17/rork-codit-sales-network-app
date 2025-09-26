@@ -152,13 +152,27 @@ export const [AuthProvider, useAuth] = createContextHook<AuthState>(() => {
       if (mockUser) {
         console.log('Found existing user with level:', mockUser.level);
       } else {
-        // Create new user based on email patterns
+        // Check if this is a predefined demo/admin email that should be allowed
+        const allowedEmails = [
+          'admin@codit.com',
+          'leader@codit.com', 
+          'senior@codit.com',
+          'amministrazione@codit.it'
+        ];
+        
+        const isAllowedEmail = allowedEmails.includes(email.toLowerCase());
         const isAdminUser = email.toLowerCase().includes('admin') || 
                            email.toLowerCase().includes('paolo.dimicco') ||
                            (email.toLowerCase().includes('paolo') && email.toLowerCase().includes('micco'));
         const isMasterUser = email.toLowerCase().includes('master') || 
                             email.toLowerCase().includes('dashboard.master') ||
                             email === 'amministrazione@codit.it';
+        
+        // Only allow login for predefined emails or admin/master patterns
+        if (!isAllowedEmail && !isAdminUser && !isMasterUser) {
+          console.log('Access denied for unregistered email:', email);
+          throw new Error('Email non registrata. Contatta l\'amministratore per richiedere l\'accesso.');
+        }
         
         console.log('Creating new user for email:', email);
         console.log('Is admin user?', isAdminUser);
