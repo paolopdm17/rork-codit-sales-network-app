@@ -150,10 +150,14 @@ export default function TabLayout() {
     return null;
   }
 
-  // Web-specific: Add a small delay to ensure proper rendering
-  if (Platform.OS === 'web' && !hasSetUser.current) {
-    console.log('TabLayout: Waiting for user to be set on web...');
-    return null;
+  // Web-specific: Ensure user is properly set but don't block rendering
+  if (Platform.OS === 'web' && !hasSetUser.current && user) {
+    console.log('TabLayout: Setting user on web...');
+    // Force set user immediately on web
+    setTimeout(() => {
+      setCurrentUser(user);
+      hasSetUser.current = true;
+    }, 0);
   }
 
   console.log('🎯 TabLayout: Rendering tabs for user:', {
@@ -187,44 +191,49 @@ export default function TabLayout() {
       />
       
       {/* Users - Admin/Master only */}
-      {isAdminOrMaster && (
-        <Tabs.Screen
-          name="users"
-          options={tabOptions.users}
-        />
-      )}
+      <Tabs.Screen
+        name="users"
+        options={{
+          ...tabOptions.users,
+          href: isAdminOrMaster ? tabOptions.users.href : null,
+        }}
+      />
       
       {/* Contracts - Master only */}
-      {(isMaster && user?.role === 'master') && (
-        <Tabs.Screen
-          name="contracts"
-          options={tabOptions.contracts}
-        />
-      )}
+      <Tabs.Screen
+        name="contracts"
+        options={{
+          ...tabOptions.contracts,
+          href: (isMaster && user?.role === 'master') ? tabOptions.contracts.href : null,
+        }}
+      />
       
       {/* My Contracts - Commercial only */}
-      {isCommercial && (
-        <Tabs.Screen
-          name="my-contracts"
-          options={tabOptions['my-contracts']}
-        />
-      )}
+      <Tabs.Screen
+        name="my-contracts"
+        options={{
+          ...tabOptions['my-contracts'],
+          href: isCommercial ? tabOptions['my-contracts'].href : null,
+        }}
+      />
       
       {/* My Team - Commercial only */}
-      {isCommercial && (
-        <Tabs.Screen
-          name="my-team"
-          options={tabOptions['my-team']}
-        />
-      )}
+      <Tabs.Screen
+        name="my-team"
+        options={{
+          ...tabOptions['my-team'],
+          href: isCommercial ? tabOptions['my-team'].href : null,
+        }}
+      />
       
       {/* Team Earnings - Master only */}
-      {isMaster && (
-        <Tabs.Screen
-          name="team-earnings"
-          options={tabOptions['team-earnings']}
-        />
-      )}
+      <Tabs.Screen
+        name="team-earnings"
+        options={{
+          ...tabOptions['team-earnings'],
+          href: isMaster ? tabOptions['team-earnings'].href : null,
+        }}
+      />
       
       {/* CRM - Always visible */}
       <Tabs.Screen

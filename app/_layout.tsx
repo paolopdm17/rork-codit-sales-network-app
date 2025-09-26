@@ -324,8 +324,8 @@ export default function RootLayout() {
       try {
         console.log('RootLayout: Starting app initialization');
         
-        // Small delay to ensure everything is ready
-        await new Promise(resolve => setTimeout(resolve, Platform.OS === 'web' ? 50 : 300));
+        // Shorter delay on web for better performance
+        await new Promise(resolve => setTimeout(resolve, Platform.OS === 'web' ? 10 : 100));
         
         console.log('RootLayout: App initialization complete');
         setIsAppReady(true);

@@ -31,14 +31,18 @@ export default function ContractsScreen() {
   });
 
   // Protezione aggiuntiva: solo i master possono accedere a questa pagina
+  // Su web, mostriamo un messaggio più user-friendly invece di bloccare completamente
   if (!user || user.role !== 'master') {
     return (
       <View style={[styles.container, { justifyContent: 'center', alignItems: 'center' }]}>
         <Text style={{ fontSize: 18, color: '#EF4444', textAlign: 'center', marginHorizontal: 20 }}>
-          ⚠️ Accesso Negato
+          ⚠️ Accesso Limitato
         </Text>
         <Text style={{ fontSize: 14, color: '#64748B', textAlign: 'center', marginHorizontal: 20, marginTop: 8 }}>
           Solo i Master possono accedere alla gestione contratti.
+        </Text>
+        <Text style={{ fontSize: 12, color: '#94A3B8', textAlign: 'center', marginHorizontal: 20, marginTop: 16 }}>
+          Ruolo attuale: {user?.role || 'Non definito'}
         </Text>
       </View>
     );
