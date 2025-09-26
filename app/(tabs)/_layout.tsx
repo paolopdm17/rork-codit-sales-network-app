@@ -1,6 +1,7 @@
 import { Tabs } from "expo-router";
 import { Home, Users, FileText, Settings, Briefcase, TrendingUp, UserCheck, Building2 } from "lucide-react-native";
 import React, { useEffect, useMemo, useRef } from "react";
+import { Platform } from "react-native";
 import { useAuth } from "@/hooks/auth-context";
 import { useData } from "@/hooks/data-context";
 
@@ -60,8 +61,77 @@ export default function TabLayout() {
       backgroundColor: "#fff",
       borderTopWidth: 1,
       borderTopColor: "#E2E8F0",
+      // Web-specific fixes
+      ...(Platform.OS === 'web' && {
+        position: 'relative' as const,
+        elevation: 0,
+        shadowOpacity: 0,
+        // Ensure proper layout on web
+        display: 'flex',
+        flexDirection: 'row',
+        justifyContent: 'space-around',
+        alignItems: 'center',
+      }),
     },
+    // Web-specific tab bar options
+    ...(Platform.OS === 'web' && {
+      tabBarLabelStyle: {
+        fontSize: 12,
+        fontWeight: '600',
+      },
+      tabBarIconStyle: {
+        marginBottom: 2,
+      },
+    }),
   }), []);
+
+  // Memoize tab options to prevent re-creation on every render
+  const tabOptions = useMemo(() => {
+    const baseOptions = {
+      dashboard: {
+        title: "Dashboard",
+        tabBarIcon: ({ color }: { color: string }) => <Home color={color} size={24} />,
+        href: '/dashboard' as const,
+      },
+      users: {
+        title: "Utenti",
+        tabBarIcon: ({ color }: { color: string }) => <Users color={color} size={24} />,
+        href: isAdminOrMaster ? ('/users' as const) : null,
+      },
+      contracts: {
+        title: "Contratti",
+        tabBarIcon: ({ color }: { color: string }) => <FileText color={color} size={24} />,
+        href: (isMaster && user?.role === 'master') ? ('/contracts' as const) : null,
+      },
+      'my-contracts': {
+        title: "I Miei Contratti",
+        tabBarIcon: ({ color }: { color: string }) => <Briefcase color={color} size={24} />,
+        href: isCommercial ? ('/my-contracts' as const) : null,
+      },
+      'my-team': {
+        title: "Il Mio Team",
+        tabBarIcon: ({ color }: { color: string }) => <UserCheck color={color} size={24} />,
+        href: isCommercial ? ('/my-team' as const) : null,
+      },
+      'team-earnings': {
+        title: "Guadagni Team",
+        tabBarIcon: ({ color }: { color: string }) => <TrendingUp color={color} size={24} />,
+        href: isMaster ? ('/team-earnings' as const) : null,
+      },
+      crm: {
+        title: "CRM",
+        tabBarIcon: ({ color }: { color: string }) => <Building2 color={color} size={24} />,
+        href: '/crm' as const,
+      },
+      profile: {
+        title: "Profilo",
+        tabBarIcon: ({ color }: { color: string }) => <Settings color={color} size={24} />,
+        href: '/profile' as const,
+      },
+    };
+    
+    return baseOptions;
+  }, [isAdminOrMaster, isMaster, isCommercial, user?.role]);
 
   // Show loading state while user is being authenticated
   if (isLoading) {
@@ -99,86 +169,52 @@ export default function TabLayout() {
 
   return (
     <Tabs screenOptions={tabScreenOptions}>
-      {/* Dashboard - Visibile a tutti */}
+      {/* Dashboard - Always visible */}
       <Tabs.Screen
         name="dashboard"
-        options={{
-          title: "Dashboard",
-          tabBarIcon: ({ color }) => <Home color={color} size={24} />,
-        }}
+        options={tabOptions.dashboard}
       />
       
-      {/* Utenti - Solo Master e Admin */}
-      {isAdminOrMaster && (
-        <Tabs.Screen
-          name="users"
-          options={{
-            title: "Utenti",
-            tabBarIcon: ({ color }) => <Users color={color} size={24} />,
-          }}
-        />
-      )}
+      {/* Users - Admin/Master only */}
+      <Tabs.Screen
+        name="users"
+        options={tabOptions.users}
+      />
       
-      {/* Contratti - Solo Master */}
-      {isMaster && user?.role === 'master' && (
-        <Tabs.Screen
-          name="contracts"
-          options={{
-            title: "Contratti",
-            tabBarIcon: ({ color }) => <FileText color={color} size={24} />,
-          }}
-        />
-      )}
+      {/* Contracts - Master only */}
+      <Tabs.Screen
+        name="contracts"
+        options={tabOptions.contracts}
+      />
       
-      {/* I Miei Contratti - Solo Commercial */}
-      {isCommercial && (
-        <Tabs.Screen
-          name="my-contracts"
-          options={{
-            title: "I Miei Contratti",
-            tabBarIcon: ({ color }) => <Briefcase color={color} size={24} />,
-          }}
-        />
-      )}
+      {/* My Contracts - Commercial only */}
+      <Tabs.Screen
+        name="my-contracts"
+        options={tabOptions['my-contracts']}
+      />
       
-      {/* Il Mio Team - Solo Commercial */}
-      {isCommercial && (
-        <Tabs.Screen
-          name="my-team"
-          options={{
-            title: "Il Mio Team",
-            tabBarIcon: ({ color }) => <UserCheck color={color} size={24} />,
-          }}
-        />
-      )}
+      {/* My Team - Commercial only */}
+      <Tabs.Screen
+        name="my-team"
+        options={tabOptions['my-team']}
+      />
       
-      {/* Guadagni Team - Solo Master */}
-      {isMaster && (
-        <Tabs.Screen
-          name="team-earnings"
-          options={{
-            title: "Guadagni Team",
-            tabBarIcon: ({ color }) => <TrendingUp color={color} size={24} />,
-          }}
-        />
-      )}
+      {/* Team Earnings - Master only */}
+      <Tabs.Screen
+        name="team-earnings"
+        options={tabOptions['team-earnings']}
+      />
       
-      {/* CRM - Visibile a tutti */}
+      {/* CRM - Always visible */}
       <Tabs.Screen
         name="crm"
-        options={{
-          title: "CRM",
-          tabBarIcon: ({ color }) => <Building2 color={color} size={24} />,
-        }}
+        options={tabOptions.crm}
       />
       
-      {/* Profilo - Visibile a tutti */}
+      {/* Profile - Always visible */}
       <Tabs.Screen
         name="profile"
-        options={{
-          title: "Profilo",
-          tabBarIcon: ({ color }) => <Settings color={color} size={24} />,
-        }}
+        options={tabOptions.profile}
       />
     </Tabs>
   );

@@ -3,7 +3,7 @@ import { Stack } from "expo-router";
 import * as SplashScreen from "expo-splash-screen";
 import React, { useEffect, Component, ReactNode, useState } from "react";
 import { GestureHandlerRootView } from "react-native-gesture-handler";
-import { View, Text, TouchableOpacity, StyleSheet, ActivityIndicator } from "react-native";
+import { View, Text, TouchableOpacity, StyleSheet, ActivityIndicator, Platform } from "react-native";
 import { AuthProvider, useAuth } from "@/hooks/auth-context";
 import { DataProvider, useData } from "@/hooks/data-context";
 
@@ -14,6 +14,11 @@ const queryClient = new QueryClient();
 const rootLayoutStyles = StyleSheet.create({
   gestureHandler: {
     flex: 1,
+    // Web-specific fixes
+    ...(Platform.OS === 'web' && {
+      height: '100vh',
+      width: '100vw',
+    }),
   },
 });
 
@@ -315,11 +320,13 @@ export default function RootLayout() {
       try {
         console.log('RootLayout: Starting app initialization');
         
-        // Keep splash screen visible while we prepare
-        await SplashScreen.preventAutoHideAsync();
+        // Only handle splash screen on native platforms
+        if (Platform.OS !== 'web') {
+          await SplashScreen.preventAutoHideAsync();
+        }
         
         // Small delay to ensure everything is ready
-        await new Promise(resolve => setTimeout(resolve, 500));
+        await new Promise(resolve => setTimeout(resolve, Platform.OS === 'web' ? 100 : 500));
         
         console.log('RootLayout: App initialization complete');
         setIsAppReady(true);
@@ -327,7 +334,9 @@ export default function RootLayout() {
         console.error('RootLayout: Error during initialization:', e);
         setIsAppReady(true); // Still show the app even if there's an error
       } finally {
-        await SplashScreen.hideAsync();
+        if (Platform.OS !== 'web') {
+          await SplashScreen.hideAsync();
+        }
       }
     }
 

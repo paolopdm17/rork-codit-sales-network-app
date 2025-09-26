@@ -1,6 +1,7 @@
 import createContextHook from '@nkzw/create-context-hook';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useEffect, useState } from 'react';
+import { Platform } from 'react-native';
 import { Contract, User, DashboardMetrics, TeamMember, CareerLevel, Client, Consultant, Deal } from '@/types';
 import { COMMISSION_RATES, LEVEL_REQUIREMENTS } from '@/constants/levels';
 import { SupabaseService } from '@/hooks/supabase-service';
