@@ -7,7 +7,10 @@ import { View, Text, TouchableOpacity, StyleSheet, ActivityIndicator, Platform }
 import { AuthProvider, useAuth } from "@/hooks/auth-context";
 import { DataProvider, useData } from "@/hooks/data-context";
 
-SplashScreen.preventAutoHideAsync();
+// Only prevent auto hide on native platforms
+if (Platform.OS !== 'web') {
+  SplashScreen.preventAutoHideAsync();
+}
 
 const queryClient = new QueryClient();
 
@@ -18,6 +21,7 @@ const rootLayoutStyles = StyleSheet.create({
     ...(Platform.OS === 'web' && {
       height: '100vh',
       width: '100vw',
+      overflow: 'hidden',
     }),
   },
 });
@@ -320,13 +324,8 @@ export default function RootLayout() {
       try {
         console.log('RootLayout: Starting app initialization');
         
-        // Only handle splash screen on native platforms
-        if (Platform.OS !== 'web') {
-          await SplashScreen.preventAutoHideAsync();
-        }
-        
         // Small delay to ensure everything is ready
-        await new Promise(resolve => setTimeout(resolve, Platform.OS === 'web' ? 100 : 500));
+        await new Promise(resolve => setTimeout(resolve, Platform.OS === 'web' ? 50 : 300));
         
         console.log('RootLayout: App initialization complete');
         setIsAppReady(true);
@@ -334,8 +333,13 @@ export default function RootLayout() {
         console.error('RootLayout: Error during initialization:', e);
         setIsAppReady(true); // Still show the app even if there's an error
       } finally {
+        // Only handle splash screen on native platforms
         if (Platform.OS !== 'web') {
-          await SplashScreen.hideAsync();
+          try {
+            await SplashScreen.hideAsync();
+          } catch (splashError) {
+            console.warn('Error hiding splash screen:', splashError);
+          }
         }
       }
     }

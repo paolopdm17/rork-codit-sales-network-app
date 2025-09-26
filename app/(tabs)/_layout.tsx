@@ -66,66 +66,64 @@ export default function TabLayout() {
         position: 'relative' as const,
         elevation: 0,
         shadowOpacity: 0,
-        // Ensure proper layout on web
-        display: 'flex',
-        flexDirection: 'row',
-        justifyContent: 'space-around',
-        alignItems: 'center',
       }),
     },
     // Web-specific tab bar options
     ...(Platform.OS === 'web' && {
       tabBarLabelStyle: {
-        fontSize: 12,
+        fontSize: 11,
         fontWeight: '600',
+        marginTop: 2,
       },
       tabBarIconStyle: {
-        marginBottom: 2,
+        marginBottom: 0,
       },
     }),
   }), []);
 
   // Memoize tab options to prevent re-creation on every render
   const tabOptions = useMemo(() => {
+    const iconSize = Platform.OS === 'web' ? 20 : 24;
+    
     const baseOptions = {
       dashboard: {
         title: "Dashboard",
-        tabBarIcon: ({ color }: { color: string }) => <Home color={color} size={24} />,
+        tabBarIcon: ({ color }: { color: string }) => <Home color={color} size={iconSize} />,
         href: '/dashboard' as const,
       },
       users: {
         title: "Utenti",
-        tabBarIcon: ({ color }: { color: string }) => <Users color={color} size={24} />,
+        tabBarIcon: ({ color }: { color: string }) => <Users color={color} size={iconSize} />,
         href: isAdminOrMaster ? ('/users' as const) : null,
       },
       contracts: {
         title: "Contratti",
-        tabBarIcon: ({ color }: { color: string }) => <FileText color={color} size={24} />,
+        tabBarIcon: ({ color }: { color: string }) => <FileText color={color} size={iconSize} />,
         href: (isMaster && user?.role === 'master') ? ('/contracts' as const) : null,
       },
       'my-contracts': {
         title: "I Miei Contratti",
-        tabBarIcon: ({ color }: { color: string }) => <Briefcase color={color} size={24} />,
+        tabBarIcon: ({ color }: { color: string }) => <Briefcase color={color} size={iconSize} />,
         href: isCommercial ? ('/my-contracts' as const) : null,
       },
       'my-team': {
         title: "Il Mio Team",
-        tabBarIcon: ({ color }: { color: string }) => <UserCheck color={color} size={24} />,
+        tabBarIcon: ({ color }: { color: string }) => <UserCheck color={color} size={iconSize} />,
         href: isCommercial ? ('/my-team' as const) : null,
       },
       'team-earnings': {
         title: "Guadagni Team",
-        tabBarIcon: ({ color }: { color: string }) => <TrendingUp color={color} size={24} />,
+        tabBarIcon: ({ color }: { color: string }) => <TrendingUp color={color} size={iconSize} />,
         href: isMaster ? ('/team-earnings' as const) : null,
       },
       crm: {
         title: "CRM",
-        tabBarIcon: ({ color }: { color: string }) => <Building2 color={color} size={24} />,
+        tabBarIcon: ({ color }: { color: string }) => <Building2 color={color} size={iconSize} />,
         href: '/crm' as const,
       },
       profile: {
         title: "Profilo",
-        tabBarIcon: ({ color }: { color: string }) => <Settings color={color} size={24} />,
+        tabBarIcon: ({ color }: { color: string }) => <Settings color={color} size={iconSize} />,
         href: '/profile' as const,
       },
     };
@@ -178,31 +176,51 @@ export default function TabLayout() {
       {/* Users - Admin/Master only */}
       <Tabs.Screen
         name="users"
-        options={tabOptions.users}
+        options={{
+          ...tabOptions.users,
+          // Hide tab if user doesn't have access
+          tabBarButton: isAdminOrMaster ? undefined : () => null,
+        }}
       />
       
       {/* Contracts - Master only */}
       <Tabs.Screen
         name="contracts"
-        options={tabOptions.contracts}
+        options={{
+          ...tabOptions.contracts,
+          // Hide tab if user doesn't have access
+          tabBarButton: (isMaster && user?.role === 'master') ? undefined : () => null,
+        }}
       />
       
       {/* My Contracts - Commercial only */}
       <Tabs.Screen
         name="my-contracts"
-        options={tabOptions['my-contracts']}
+        options={{
+          ...tabOptions['my-contracts'],
+          // Hide tab if user doesn't have access
+          tabBarButton: isCommercial ? undefined : () => null,
+        }}
       />
       
       {/* My Team - Commercial only */}
       <Tabs.Screen
         name="my-team"
-        options={tabOptions['my-team']}
+        options={{
+          ...tabOptions['my-team'],
+          // Hide tab if user doesn't have access
+          tabBarButton: isCommercial ? undefined : () => null,
+        }}
       />
       
       {/* Team Earnings - Master only */}
       <Tabs.Screen
         name="team-earnings"
-        options={tabOptions['team-earnings']}
+        options={{
+          ...tabOptions['team-earnings'],
+          // Hide tab if user doesn't have access
+          tabBarButton: isMaster ? undefined : () => null,
+        }}
       />
       
       {/* CRM - Always visible */}

@@ -1,14 +1,17 @@
 import React, { useState, useMemo, useEffect } from 'react';
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Alert, TextInput } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity, TextInput, Platform } from 'react-native';
 import { Stack, router } from 'expo-router';
-import { Plus, Users, UserCheck, Search, X, Building2, Mail, Phone, Award, DollarSign, Star, Briefcase, Calendar, TrendingUp } from 'lucide-react-native';
+import { Plus, Users, UserCheck, Search, X, Mail, Phone, DollarSign, Star, Briefcase } from 'lucide-react-native';
 import { useData } from '@/hooks/data-context';
 import { useAuth } from '@/hooks/auth-context';
+import { useAlert } from '@/components/WebAlert';
 import { Client, Consultant, Deal } from '@/types';
+import { WEB_CONFIG } from '@/constants/web-config';
 
 export default function CRMScreen() {
   const { visibleClients, visibleConsultants, visibleDeals, deleteClient, deleteConsultant, deleteDeal, refreshData, users } = useData();
   const { user } = useAuth();
+  const { showAlert, AlertComponent } = useAlert();
   const [activeTab, setActiveTab] = useState<'clients' | 'consultants' | 'deals'>('clients');
   const [searchQuery, setSearchQuery] = useState('');
   const [showSearch, setShowSearch] = useState(false);
@@ -73,7 +76,7 @@ export default function CRMScreen() {
   };
 
   const handleDeleteClient = (clientId: string) => {
-    Alert.alert(
+    showAlert(
       'Conferma eliminazione',
       'Sei sicuro di voler eliminare questo cliente?',
       [
@@ -88,7 +91,7 @@ export default function CRMScreen() {
   };
 
   const handleDeleteConsultant = (consultantId: string) => {
-    Alert.alert(
+    showAlert(
       'Conferma eliminazione',
       'Sei sicuro di voler eliminare questo consulente?',
       [
@@ -103,7 +106,7 @@ export default function CRMScreen() {
   };
 
   const handleDeleteDeal = (dealId: string) => {
-    Alert.alert(
+    showAlert(
       'Conferma eliminazione',
       'Sei sicuro di voler eliminare questo affare?',
       [
@@ -160,13 +163,13 @@ export default function CRMScreen() {
       
       <View style={styles.cardActions}>
         <TouchableOpacity 
-          style={styles.editButton}
+          style={[styles.editButton, WEB_CONFIG.STYLES.CURSOR_POINTER]}
           onPress={() => router.push(`/edit-client?id=${client.id}`)}
         >
           <Text style={styles.editButtonText}>Modifica</Text>
         </TouchableOpacity>
         <TouchableOpacity 
-          style={styles.deleteButton}
+          style={[styles.deleteButton, WEB_CONFIG.STYLES.CURSOR_POINTER]}
           onPress={() => handleDeleteClient(client.id)}
         >
           <Text style={styles.deleteButtonText}>Elimina</Text>
@@ -225,13 +228,13 @@ export default function CRMScreen() {
       
       <View style={styles.cardActions}>
         <TouchableOpacity 
-          style={styles.editButton}
+          style={[styles.editButton, WEB_CONFIG.STYLES.CURSOR_POINTER]}
           onPress={() => router.push(`/edit-consultant?id=${consultant.id}`)}
         >
           <Text style={styles.editButtonText}>Modifica</Text>
         </TouchableOpacity>
         <TouchableOpacity 
-          style={styles.deleteButton}
+          style={[styles.deleteButton, WEB_CONFIG.STYLES.CURSOR_POINTER]}
           onPress={() => handleDeleteConsultant(consultant.id)}
         >
           <Text style={styles.deleteButtonText}>Elimina</Text>
@@ -268,13 +271,13 @@ export default function CRMScreen() {
       
       <View style={styles.cardActions}>
         <TouchableOpacity 
-          style={styles.editButton}
+          style={[styles.editButton, WEB_CONFIG.STYLES.CURSOR_POINTER]}
           onPress={() => router.push(`/edit-deal?id=${deal.id}`)}
         >
           <Text style={styles.editButtonText}>Modifica</Text>
         </TouchableOpacity>
         <TouchableOpacity 
-          style={styles.deleteButton}
+          style={[styles.deleteButton, WEB_CONFIG.STYLES.CURSOR_POINTER]}
           onPress={() => handleDeleteDeal(deal.id)}
         >
           <Text style={styles.deleteButtonText}>Elimina</Text>
@@ -501,6 +504,9 @@ export default function CRMScreen() {
           <Plus color="#fff" size={24} />
         </TouchableOpacity>
       </View>
+      
+      {/* Alert Component for Web */}
+      <AlertComponent />
     </View>
   );
 }
@@ -512,11 +518,12 @@ const styles = StyleSheet.create({
   },
   floatingButtonsContainer: {
     position: 'absolute',
-    bottom: 30,
+    bottom: Platform.OS === 'web' ? 20 : 30,
     right: 20,
     flexDirection: 'row',
     alignItems: 'center',
     gap: 16,
+    zIndex: 1000,
   },
   floatingSearchButton: {
     backgroundColor: '#fff',
@@ -532,6 +539,11 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.15,
     shadowRadius: 8,
     elevation: 6,
+    // Web-specific fixes
+    ...(Platform.OS === 'web' && {
+      cursor: 'pointer',
+      userSelect: 'none',
+    }),
   },
   floatingAddButton: {
     backgroundColor: '#1E40AF',
@@ -545,6 +557,11 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.3,
     shadowRadius: 8,
     elevation: 8,
+    // Web-specific fixes
+    ...(Platform.OS === 'web' && {
+      cursor: 'pointer',
+      userSelect: 'none',
+    }),
   },
   searchContainer: {
     backgroundColor: '#fff',
@@ -609,7 +626,7 @@ const styles = StyleSheet.create({
   },
   content: {
     flex: 1,
-    paddingBottom: 100,
+    paddingBottom: Platform.OS === 'web' ? 80 : 100,
   },
   section: {
     padding: 20,

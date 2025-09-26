@@ -1,6 +1,7 @@
 import createContextHook from '@nkzw/create-context-hook';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useEffect, useState } from 'react';
+import { Platform } from 'react-native';
 import { User, UserRole, CareerLevel } from '@/types';
 import { SupabaseService } from '@/hooks/supabase-service';
 
@@ -93,7 +94,9 @@ export const [AuthProvider, useAuth] = createContextHook<AuthState>(() => {
       } catch (error) {
         console.error('Error loading user:', error);
       } finally {
-        setIsLoading(false);
+        // Use shorter timeout on web for better performance
+        const timeout = Platform.OS === 'web' ? 50 : 100;
+        setTimeout(() => setIsLoading(false), timeout);
       }
     };
     
@@ -111,15 +114,19 @@ export const [AuthProvider, useAuth] = createContextHook<AuthState>(() => {
     try {
       console.log('Login attempt for:', email);
       
-      // First try to get users from Supabase
+      // First try to get users from Supabase (skip on web for faster loading)
       let existingUsers: User[] = [];
-      try {
-        existingUsers = await SupabaseService.getUsers();
-        console.log('Loaded users from Supabase:', existingUsers.length);
-      } catch (supabaseError) {
-        console.warn('Failed to load from Supabase, falling back to local storage:', supabaseError);
-        
-        // Fallback to AsyncStorage if Supabase fails
+      if (Platform.OS !== 'web') {
+        try {
+          existingUsers = await SupabaseService.getUsers();
+          console.log('Loaded users from Supabase:', existingUsers.length);
+        } catch (supabaseError) {
+          console.warn('Failed to load from Supabase, falling back to local storage:', supabaseError);
+        }
+      }
+      
+      // Always check local storage
+      if (existingUsers.length === 0) {
         const usersData = await AsyncStorage.getItem('users');
         if (usersData) {
           try {

@@ -1,6 +1,6 @@
 import { Redirect } from 'expo-router';
 import { useAuth } from '@/hooks/auth-context';
-import { View, ActivityIndicator, StyleSheet, Text } from 'react-native';
+import { View, ActivityIndicator, StyleSheet, Text, Platform } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useEffect, useState } from 'react';
 
@@ -12,19 +12,20 @@ export default function Index() {
     // Add a small delay to ensure everything is properly initialized
     const timer = setTimeout(() => {
       setIsReady(true);
-    }, 200);
+    }, Platform.OS === 'web' ? 100 : 200);
 
     return () => clearTimeout(timer);
   }, []);
 
   if (isLoading || !isReady) {
+    const LoadingComponent = Platform.OS === 'web' ? View : SafeAreaView;
     return (
-      <SafeAreaView style={styles.container}>
+      <LoadingComponent style={styles.container}>
         <View style={styles.loadingContainer}>
           <ActivityIndicator size="large" color="#2196f3" />
           <Text style={styles.loadingText}>Caricamento...</Text>
         </View>
-      </SafeAreaView>
+      </LoadingComponent>
     );
   }
 
@@ -38,6 +39,12 @@ export default function Index() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
+    backgroundColor: '#f5f5f5',
+    // Web-specific fixes
+    ...(Platform.OS === 'web' && {
+      height: '100vh',
+      width: '100vw',
+    }),
   },
   loadingContainer: {
     flex: 1,
