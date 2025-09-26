@@ -269,22 +269,28 @@ export const [DataProvider, useData] = createContextHook<DataState>(() => {
               // Reload after sync
               return loadData(user);
             } else {
-              console.log('No local data, generating mock data...');
-              const mockUsers = generateMockUsers();
-              const mockContracts = generateMockContracts();
-              const mockDeals = generateMockDeals();
+              console.log('No local data, generating clean data...');
+              const cleanUsers = generateMockUsers(); // Only master account
+              const cleanContracts = generateMockContracts(); // Empty
+              const cleanClients: Client[] = []; // Empty
+              const cleanConsultants: Consultant[] = []; // Empty
+              const cleanDeals = generateMockDeals(); // Empty
               
               // Save to both local and Supabase
               await Promise.all([
-                AsyncStorage.setItem('contracts', JSON.stringify(mockContracts)),
-                AsyncStorage.setItem('users', JSON.stringify(mockUsers)),
-                AsyncStorage.setItem('deals', JSON.stringify(mockDeals)),
-                SupabaseService.syncLocalDataToSupabase(mockUsers, mockContracts, [], [], mockDeals)
+                AsyncStorage.setItem('contracts', JSON.stringify(cleanContracts)),
+                AsyncStorage.setItem('users', JSON.stringify(cleanUsers)),
+                AsyncStorage.setItem('clients', JSON.stringify(cleanClients)),
+                AsyncStorage.setItem('consultants', JSON.stringify(cleanConsultants)),
+                AsyncStorage.setItem('deals', JSON.stringify(cleanDeals)),
+                SupabaseService.syncLocalDataToSupabase(cleanUsers, cleanContracts, cleanClients, cleanConsultants, cleanDeals)
               ]);
               
-              setContracts(mockContracts);
-              setUsers(mockUsers);
-              setDeals(mockDeals);
+              setContracts(cleanContracts);
+              setUsers(cleanUsers);
+              setClients(cleanClients);
+              setConsultants(cleanConsultants);
+              setDeals(cleanDeals);
             }
           }
           
@@ -314,7 +320,7 @@ export const [DataProvider, useData] = createContextHook<DataState>(() => {
       const contractsData = await AsyncStorage.getItem('contracts');
       let loadedContracts: Contract[];
       if (!contractsData) {
-        // First time - save mock data
+        // First time - save clean data (empty)
         loadedContracts = generateMockContracts();
         await AsyncStorage.setItem('contracts', JSON.stringify(loadedContracts));
       } else {
@@ -367,7 +373,7 @@ export const [DataProvider, useData] = createContextHook<DataState>(() => {
       const usersData = await AsyncStorage.getItem('users');
       let loadedUsers: User[];
       if (!usersData) {
-        // First time - save mock data
+        // First time - save clean data (only master account)
         loadedUsers = generateMockUsers();
         await AsyncStorage.setItem('users', JSON.stringify(loadedUsers));
       } else {
@@ -412,13 +418,12 @@ export const [DataProvider, useData] = createContextHook<DataState>(() => {
             console.warn('Full corrupted data:', usersData);
           }
           loadedUsers = generateMockUsers();
-          console.log('🔄 Generated fresh mock users:', loadedUsers.length);
-          console.log('Andrew Ferro in fresh mock users:', loadedUsers.find(u => u.name === 'Andrew Ferro') ? '✅ FOUND' : '❌ NOT FOUND');
+          console.log('🔄 Generated fresh clean users:', loadedUsers.length, '(only master account)');
           await AsyncStorage.setItem('users', JSON.stringify(loadedUsers));
         }
       }
       console.log('Loaded users:', loadedUsers);
-      console.log('🔍 ANDREW FERRO CHECK IN LOADED USERS:', loadedUsers.find(u => u.name === 'Andrew Ferro') ? 'FOUND' : 'NOT FOUND');
+      console.log('✅ Clean users loaded - only master account present');
       setUsers(loadedUsers);
       
       // Load pending users
@@ -501,7 +506,7 @@ export const [DataProvider, useData] = createContextHook<DataState>(() => {
       const dealsData = await AsyncStorage.getItem('deals');
       let loadedDeals: Deal[] = [];
       if (!dealsData) {
-        // First time - save mock data
+        // First time - save clean data (empty)
         loadedDeals = generateMockDeals();
         await AsyncStorage.setItem('deals', JSON.stringify(loadedDeals));
       } else {
@@ -1561,11 +1566,14 @@ export const [DataProvider, useData] = createContextHook<DataState>(() => {
 
   const resetData = async () => {
     try {
-      console.log('=== RESETTING ALL DATA ===');
-      // Clear all stored data and reload with fresh mock data
+      console.log('=== RESETTING ALL DATA TO CLEAN STATE ===');
+      // Clear all stored data and reload with fresh clean data
       await AsyncStorage.removeItem('contracts');
       await AsyncStorage.removeItem('users');
       await AsyncStorage.removeItem('pendingUsers');
+      await AsyncStorage.removeItem('clients');
+      await AsyncStorage.removeItem('consultants');
+      await AsyncStorage.removeItem('deals');
       // Don't clear auth user to maintain login state
       
       console.log('All AsyncStorage data cleared (except auth user)');
@@ -1574,28 +1582,45 @@ export const [DataProvider, useData] = createContextHook<DataState>(() => {
       setContracts([]);
       setUsers([]);
       setPendingUsers([]);
+      setClients([]);
+      setConsultants([]);
+      setDeals([]);
       setVisibleContracts([]);
       setVisibleUsers([]);
+      setVisibleClients([]);
+      setVisibleConsultants([]);
+      setVisibleDeals([]);
       setMetrics(null);
       
-      // Generate fresh mock data
-      const freshContracts = generateMockContracts();
-      const freshUsers = generateMockUsers();
+      // Generate fresh clean data (only master account)
+      const freshContracts = generateMockContracts(); // Empty array
+      const freshUsers = generateMockUsers(); // Only master account
+      const freshClients: Client[] = []; // Empty array
+      const freshConsultants: Consultant[] = []; // Empty array
+      const freshDeals = generateMockDeals(); // Empty array
       
-      console.log('Generated fresh mock data:');
+      console.log('Generated fresh clean data:');
       console.log('Fresh contracts:', freshContracts.length);
-      console.log('Fresh users:', freshUsers.length);
-      console.log('Andrew Ferro in fresh users:', freshUsers.find(u => u.name === 'Andrew Ferro'));
+      console.log('Fresh users:', freshUsers.length, '- Only master account');
+      console.log('Fresh clients:', freshClients.length);
+      console.log('Fresh consultants:', freshConsultants.length);
+      console.log('Fresh deals:', freshDeals.length);
       
-      // Save fresh data to storage
+      // Save fresh clean data to storage
       await AsyncStorage.setItem('contracts', JSON.stringify(freshContracts));
       await AsyncStorage.setItem('users', JSON.stringify(freshUsers));
       await AsyncStorage.setItem('pendingUsers', JSON.stringify([]));
+      await AsyncStorage.setItem('clients', JSON.stringify(freshClients));
+      await AsyncStorage.setItem('consultants', JSON.stringify(freshConsultants));
+      await AsyncStorage.setItem('deals', JSON.stringify(freshDeals));
       
-      // Update state with fresh data
+      // Update state with fresh clean data
       setContracts(freshContracts);
       setUsers(freshUsers);
       setPendingUsers([]);
+      setClients(freshClients);
+      setConsultants(freshConsultants);
+      setDeals(freshDeals);
       
       // Force immediate data filtering and metrics calculation for current user
       if (currentUser) {
@@ -1615,11 +1640,14 @@ export const [DataProvider, useData] = createContextHook<DataState>(() => {
         // Filter data for current user
         if (currentUser.role === 'admin' || currentUser.role === 'master') {
           const allApprovedUsers = finalUsersList.filter(u => u.status === 'approved');
-          console.log('Admin/Master - setting visible data:', freshContracts.length, 'contracts,', allApprovedUsers.length, 'users');
+          console.log('Admin/Master - setting visible clean data:', freshContracts.length, 'contracts,', allApprovedUsers.length, 'users');
           setVisibleContracts([...freshContracts]);
           setVisibleUsers([...allApprovedUsers]);
+          setVisibleClients([...freshClients]);
+          setVisibleConsultants([...freshConsultants]);
+          setVisibleDeals([...freshDeals]);
         } else {
-          // For commercials, filter based on connections
+          // For commercials, filter based on connections (will be empty since no data)
           const connectedUserIds = getConnectedUserIds(currentUser.id, finalUsersList);
           const filteredContracts = freshContracts.filter(contract => {
             const isDeveloper = connectedUserIds.includes(contract.developerId);
@@ -1630,18 +1658,22 @@ export const [DataProvider, useData] = createContextHook<DataState>(() => {
             return connectedUserIds.includes(u.id) && u.status === 'approved';
           });
           
-          console.log('Commercial - setting filtered data:', filteredContracts.length, 'contracts,', filteredUsers.length, 'users');
+          console.log('Commercial - setting filtered clean data:', filteredContracts.length, 'contracts,', filteredUsers.length, 'users');
           setVisibleContracts(filteredContracts);
           setVisibleUsers(filteredUsers);
+          setVisibleClients([]);
+          setVisibleConsultants([]);
+          setVisibleDeals([]);
         }
         
         // Calculate fresh metrics
         const freshMetrics = calculateMetrics(currentUser.id, freshContracts, finalUsersList, currentUser);
-        console.log('Setting fresh metrics:', freshMetrics);
+        console.log('Setting fresh clean metrics:', freshMetrics);
         setMetrics(freshMetrics);
       }
       
-      console.log('=== DATA RESET COMPLETE ===');
+      console.log('=== DATA RESET TO CLEAN STATE COMPLETE ===');
+      console.log('✅ All test data removed, only master account remains');
     } catch (error) {
       console.error('Error resetting data:', error);
     }
@@ -1654,6 +1686,9 @@ export const [DataProvider, useData] = createContextHook<DataState>(() => {
       await AsyncStorage.removeItem('contracts');
       await AsyncStorage.removeItem('users');
       await AsyncStorage.removeItem('pendingUsers');
+      await AsyncStorage.removeItem('clients');
+      await AsyncStorage.removeItem('consultants');
+      await AsyncStorage.removeItem('deals');
       await AsyncStorage.removeItem('user');
       
       console.log('All potentially corrupted data cleared');
@@ -1662,24 +1697,39 @@ export const [DataProvider, useData] = createContextHook<DataState>(() => {
       setContracts([]);
       setUsers([]);
       setPendingUsers([]);
+      setClients([]);
+      setConsultants([]);
+      setDeals([]);
       setVisibleContracts([]);
       setVisibleUsers([]);
+      setVisibleClients([]);
+      setVisibleConsultants([]);
+      setVisibleDeals([]);
       setMetrics(null);
       setCurrentUser(null);
       
-      // Force reload with fresh mock data
+      // Force reload with fresh clean data
       const freshContracts = generateMockContracts();
       const freshUsers = generateMockUsers();
+      const freshClients: Client[] = [];
+      const freshConsultants: Consultant[] = [];
+      const freshDeals = generateMockDeals();
       
       await AsyncStorage.setItem('contracts', JSON.stringify(freshContracts));
       await AsyncStorage.setItem('users', JSON.stringify(freshUsers));
       await AsyncStorage.setItem('pendingUsers', JSON.stringify([]));
+      await AsyncStorage.setItem('clients', JSON.stringify(freshClients));
+      await AsyncStorage.setItem('consultants', JSON.stringify(freshConsultants));
+      await AsyncStorage.setItem('deals', JSON.stringify(freshDeals));
       
       setContracts(freshContracts);
       setUsers(freshUsers);
       setPendingUsers([]);
+      setClients(freshClients);
+      setConsultants(freshConsultants);
+      setDeals(freshDeals);
       
-      console.log('Fresh mock data loaded after clearing corruption');
+      console.log('Fresh clean data loaded after clearing corruption');
       console.log('=== CORRUPTED DATA CLEAR COMPLETE ===');
     } catch (error) {
       console.error('Error clearing corrupted data:', error);
@@ -2144,7 +2194,7 @@ export const [DataProvider, useData] = createContextHook<DataState>(() => {
   };
 });
 
-// Mock data generators
+// Mock data generators - Clean data with only master account
 const generateMockUsers = (): User[] => {
   return [
     {
