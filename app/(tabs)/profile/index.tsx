@@ -24,6 +24,7 @@ import {
   Activity,
   Trash2
 } from "lucide-react-native";
+import { DataCleanupService } from '@/hooks/data-cleanup';
 import { CAREER_LEVELS, LEVEL_COLORS, COMMISSION_RATES } from "@/constants/levels";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { LinearGradient } from 'expo-linear-gradient';
@@ -120,6 +121,40 @@ export default function ProfileScreen() {
       console.error('Error refreshing data:', error);
       Alert.alert("Errore", "Si è verificato un errore durante l'aggiornamento");
     }
+  };
+
+  const handleCleanupProductionData = () => {
+    Alert.alert(
+      "Pulizia Dati Produzione",
+      "Questa operazione eliminerà TUTTI i dati test dal database, mantenendo solo l'account amministrazione@codit.it.\n\nQuesta azione NON può essere annullata.\n\nSei sicuro di voler procedere?",
+      [
+        { text: "Annulla", style: "cancel" },
+        {
+          text: "Elimina Tutto",
+          style: "destructive",
+          onPress: async () => {
+            try {
+              console.log('🧹 Iniziando pulizia dati produzione...');
+              await DataCleanupService.cleanupTestData();
+              
+              // Refresh data after cleanup
+              await refreshData(user);
+              
+              Alert.alert(
+                "Pulizia Completata", 
+                "Tutti i dati test sono stati eliminati con successo. Solo l'account master amministrazione@codit.it è stato preservato."
+              );
+            } catch (error) {
+              console.error('Errore durante la pulizia:', error);
+              Alert.alert(
+                "Errore", 
+                "Si è verificato un errore durante la pulizia dei dati. Controlla i log per maggiori dettagli."
+              );
+            }
+          },
+        },
+      ]
+    );
   };
 
   if (!user) return null;
@@ -269,16 +304,29 @@ export default function ProfileScreen() {
           </View>
           
           {user.role === 'master' && (
-            <TouchableOpacity 
-              style={[styles.toolCard, styles.fullWidthTool]} 
-              onPress={() => router.push('/data-cleanup')}
-            >
-              <View style={[styles.toolIcon, { backgroundColor: '#FEE2E2' }]}>
-                <Trash2 color="#EF4444" size={24} />
-              </View>
-              <Text style={styles.toolTitle}>Pulizia Dati Produzione</Text>
-              <Text style={styles.toolDescription}>Elimina tutti i dati test per iniziare in produzione</Text>
-            </TouchableOpacity>
+            <>
+              <TouchableOpacity 
+                style={[styles.toolCard, styles.fullWidthTool]} 
+                onPress={handleCleanupProductionData}
+              >
+                <View style={[styles.toolIcon, { backgroundColor: '#FEE2E2' }]}>
+                  <Trash2 color="#EF4444" size={24} />
+                </View>
+                <Text style={styles.toolTitle}>Pulizia Dati Produzione</Text>
+                <Text style={styles.toolDescription}>Elimina tutti i dati test per iniziare in produzione</Text>
+              </TouchableOpacity>
+              
+              <TouchableOpacity 
+                style={[styles.toolCard, styles.fullWidthTool]} 
+                onPress={() => router.push('/data-cleanup')}
+              >
+                <View style={[styles.toolIcon, { backgroundColor: '#F0F9FF' }]}>
+                  <Database color="#0369A1" size={24} />
+                </View>
+                <Text style={styles.toolTitle}>Stato Database</Text>
+                <Text style={styles.toolDescription}>Visualizza stato dettagliato del database</Text>
+              </TouchableOpacity>
+            </>
           )}
         </View>
       )}
