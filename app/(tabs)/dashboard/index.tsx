@@ -19,7 +19,7 @@ import { useCallback } from "react";
 
 export default function DashboardScreen() {
   const { user } = useAuth();
-  const { metrics, isLoading, refreshData, resetData, forceDataRefresh, setCurrentUser, visibleUsers, visibleContracts } = useData();
+  const { metrics, isLoading, refreshData, resetData, setCurrentUser, visibleUsers, visibleContracts } = useData();
   const [refreshing, setRefreshing] = useState(false);
   const [showRequirementsModal, setShowRequirementsModal] = useState(false);
   
@@ -76,24 +76,7 @@ export default function DashboardScreen() {
     );
   };
 
-  const handleForceRefresh = () => {
-    Alert.alert(
-      "Risolvi Errori",
-      "Questo cancellerà tutti i dati corrotti e ricaricherà i dati puliti. Vuoi continuare?",
-      [
-        { text: "Annulla", style: "cancel" },
-        {
-          text: "Risolvi",
-          style: "destructive",
-          onPress: async () => {
-            setRefreshing(true);
-            await forceDataRefresh();
-            setRefreshing(false);
-          },
-        },
-      ]
-    );
-  };
+
 
   if (isLoading) {
     return (
@@ -160,12 +143,6 @@ export default function DashboardScreen() {
               </View>
             </View>
             <View style={styles.headerButtons}>
-              <TouchableOpacity
-                style={[styles.resetButton, styles.fixButton]}
-                onPress={handleForceRefresh}
-              >
-                <Text style={styles.buttonText}>Risolvi</Text>
-              </TouchableOpacity>
               <TouchableOpacity
                 style={styles.resetButton}
                 onPress={handleResetData}
@@ -354,12 +331,6 @@ export default function DashboardScreen() {
           </View>
           {(user?.role === 'admin' || user?.role === 'master') && (
             <View style={styles.headerButtons}>
-              <TouchableOpacity
-                style={[styles.resetButton, styles.fixButton]}
-                onPress={handleForceRefresh}
-              >
-                <Text style={styles.buttonText}>Risolvi</Text>
-              </TouchableOpacity>
               <TouchableOpacity
                 style={styles.resetButton}
                 onPress={handleResetData}
