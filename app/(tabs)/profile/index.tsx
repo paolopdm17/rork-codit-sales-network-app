@@ -21,7 +21,8 @@ import {
   Star,
   TrendingUp,
   Users,
-  Activity
+  Activity,
+  Trash2
 } from "lucide-react-native";
 import { CAREER_LEVELS, LEVEL_COLORS, COMMISSION_RATES } from "@/constants/levels";
 import AsyncStorage from "@react-native-async-storage/async-storage";
@@ -266,6 +267,19 @@ export default function ProfileScreen() {
               <Text style={styles.toolDescription}>Carica dati di esempio</Text>
             </TouchableOpacity>
           </View>
+          
+          {user.role === 'master' && (
+            <TouchableOpacity 
+              style={[styles.toolCard, styles.fullWidthTool]} 
+              onPress={() => router.push('/data-cleanup')}
+            >
+              <View style={[styles.toolIcon, { backgroundColor: '#FEE2E2' }]}>
+                <Trash2 color="#EF4444" size={24} />
+              </View>
+              <Text style={styles.toolTitle}>Pulizia Dati Produzione</Text>
+              <Text style={styles.toolDescription}>Elimina tutti i dati test per iniziare in produzione</Text>
+            </TouchableOpacity>
+          )}
         </View>
       )}
 
@@ -571,5 +585,8 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: "600",
     color: "#EF4444",
+  },
+  fullWidthTool: {
+    marginTop: 12,
   },
 });
