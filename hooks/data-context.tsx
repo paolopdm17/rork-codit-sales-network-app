@@ -2195,25 +2195,29 @@ export const [DataProvider, useData] = createContextHook<DataState>(() => {
   };
 });
 
-// Mock data generators - Clean data with only master account
+// Production data generators - Clean data with only master account
 const generateMockUsers = (): User[] => {
+  console.log('🧹 Generating clean production users - only master account');
   return [
     {
-      id: '1',
+      id: 'master-admin-001',
       email: 'amministrazione@codit.it',
-      name: 'Amministratore',
+      name: 'Amministratore Master',
       role: 'master',
       status: 'approved',
       level: 'managing_director',
       createdAt: new Date('2024-01-01'),
+      approvedAt: new Date('2024-01-01'),
     },
   ];
 };
 
 const generateMockContracts = (): Contract[] => {
+  console.log('🧹 Generating clean production contracts - empty array');
   return [];
 };
 
 const generateMockDeals = (): Deal[] => {
+  console.log('🧹 Generating clean production deals - empty array');
   return [];
 };
