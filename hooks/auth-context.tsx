@@ -304,8 +304,27 @@ export const [AuthProvider, useAuth] = createContextHook<AuthState>(() => {
   };
 
   const logout = async () => {
-    await AsyncStorage.removeItem('user');
-    setUser(null);
+    try {
+      console.log('Auth context: Starting logout process...');
+      
+      // Clear user data from storage
+      await AsyncStorage.removeItem('user');
+      console.log('Auth context: User data cleared from storage');
+      
+      // Clear user state
+      setUser(null);
+      console.log('Auth context: User state cleared');
+      
+      // Add a small delay to ensure state is properly updated
+      await new Promise(resolve => setTimeout(resolve, 50));
+      
+      console.log('Auth context: Logout completed successfully');
+    } catch (error) {
+      console.error('Auth context: Error during logout:', error);
+      // Still clear the user state even if storage fails
+      setUser(null);
+      throw error;
+    }
   };
 
   return {
