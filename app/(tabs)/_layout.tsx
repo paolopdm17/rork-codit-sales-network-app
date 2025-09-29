@@ -1,7 +1,7 @@
 import { Tabs } from "expo-router";
 import { Home, Users, FileText, Settings, Briefcase, TrendingUp, UserCheck, Building2 } from "lucide-react-native";
-import React, { useEffect, useMemo, useRef } from "react";
-import { Platform } from "react-native";
+import React, { useEffect, useMemo, useRef, useState } from "react";
+import { Platform, View, Text, TouchableOpacity, ActivityIndicator } from "react-native";
 import { useAuth } from "@/hooks/auth-context";
 import { useData } from "@/hooks/data-context";
 import { WEB_CONFIG } from "@/constants/web-config";
@@ -10,18 +10,60 @@ export default function TabLayout() {
   const { user, isAuthenticated, isLoading } = useAuth();
   const { setCurrentUser } = useData();
   const hasSetUser = useRef(false);
+  const [tabError, setTabError] = useState<string | null>(null);
+  const renderCount = useRef(0);
+  
+  // Increment render count for debugging
+  renderCount.current += 1;
+  console.log(`🔄 TabLayout render #${renderCount.current}`, {
+    hasUser: !!user,
+    isAuthenticated,
+    isLoading,
+    platform: Platform.OS
+  });
 
   // Set current user in data context when user changes
   useEffect(() => {
-    if (user && isAuthenticated && !hasSetUser.current) {
-      console.log('Setting current user in data context:', user.name);
-      setCurrentUser(user);
-      hasSetUser.current = true;
-    } else if (!user && !isAuthenticated && hasSetUser.current) {
-      console.log('User not authenticated, clearing current user');
-      setCurrentUser(null);
-      hasSetUser.current = false;
+    let isMounted = true;
+    
+    const syncUser = async () => {
+      try {
+        console.log('🔄 TabLayout: Syncing user...', {
+          hasUser: !!user,
+          isAuthenticated,
+          hasSetUser: hasSetUser.current,
+          platform: Platform.OS
+        });
+        
+        if (user && isAuthenticated && !hasSetUser.current && isMounted) {
+          console.log('✅ Setting current user in data context:', user.name);
+          setCurrentUser(user);
+          hasSetUser.current = true;
+          setTabError(null);
+        } else if (!user && !isAuthenticated && hasSetUser.current && isMounted) {
+          console.log('🔄 User not authenticated, clearing current user');
+          setCurrentUser(null);
+          hasSetUser.current = false;
+          setTabError(null);
+        }
+      } catch (error) {
+        console.error('❌ TabLayout: Error syncing user:', error);
+        if (isMounted) {
+          setTabError(error instanceof Error ? error.message : 'User sync failed');
+        }
+      }
+    };
+    
+    // Add small delay on web to prevent race conditions
+    if (Platform.OS === 'web') {
+      setTimeout(syncUser, 50);
+    } else {
+      syncUser();
     }
+    
+    return () => {
+      isMounted = false;
+    };
   }, [user, isAuthenticated, setCurrentUser]);
 
   // Memoize role checks to prevent unnecessary re-renders
@@ -138,16 +180,47 @@ export default function TabLayout() {
     return baseOptions;
   }, [isAdminOrMaster, isMaster, isCommercial, user?.role]);
 
+  // Show error state if tab sync failed
+  if (tabError) {
+    console.error('❌ TabLayout: Tab error state:', tabError);
+    return (
+      <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center', padding: 20 }}>
+        <Text style={{ fontSize: 18, fontWeight: 'bold', color: '#d32f2f', marginBottom: 10 }}>Errore Tab</Text>
+        <Text style={{ fontSize: 14, color: '#666', textAlign: 'center', marginBottom: 20 }}>{tabError}</Text>
+        <TouchableOpacity 
+          style={{ backgroundColor: '#2196f3', padding: 12, borderRadius: 8 }}
+          onPress={() => {
+            console.log('🔄 Resetting tab error state');
+            setTabError(null);
+            hasSetUser.current = false;
+          }}
+        >
+          <Text style={{ color: 'white', fontWeight: '600' }}>Riprova</Text>
+        </TouchableOpacity>
+      </View>
+    );
+  }
+  
   // Show loading state while user is being authenticated
   if (isLoading) {
-    console.log('TabLayout: Still loading user authentication...');
-    return null;
+    console.log('⏳ TabLayout: Still loading user authentication...');
+    return (
+      <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center' }}>
+        <ActivityIndicator size="large" color="#2196f3" />
+        <Text style={{ marginTop: 10, color: '#666' }}>Caricamento utente...</Text>
+      </View>
+    );
   }
 
   // Don't render tabs if user is not authenticated
   if (!isAuthenticated || !user) {
-    console.log('TabLayout: User not authenticated or missing:', { isAuthenticated, hasUser: !!user });
-    return null;
+    console.log('🚫 TabLayout: User not authenticated or missing:', { isAuthenticated, hasUser: !!user });
+    return (
+      <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center', padding: 20 }}>
+        <Text style={{ fontSize: 16, color: '#666', textAlign: 'center' }}>Accesso richiesto</Text>
+        <Text style={{ fontSize: 14, color: '#999', textAlign: 'center', marginTop: 10 }}>Effettua il login per continuare</Text>
+      </View>
+    );
   }
 
   // Web-specific: Ensure user is properly set but don't block rendering

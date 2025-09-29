@@ -6,6 +6,7 @@ import { GestureHandlerRootView } from "react-native-gesture-handler";
 import { View, Text, TouchableOpacity, StyleSheet, ActivityIndicator, Platform } from "react-native";
 import { AuthProvider, useAuth } from "@/hooks/auth-context";
 import { DataProvider, useData } from "@/hooks/data-context";
+import WebErrorMonitor from "@/components/WebErrorMonitor";
 
 // Only prevent auto hide on native platforms
 if (Platform.OS !== 'web') {
@@ -42,28 +43,64 @@ class ErrorBoundary extends Component<
   }
 
   componentDidCatch(error: Error, errorInfo: any) {
-    console.error('Error Boundary - Component stack:', errorInfo.componentStack);
-    console.error('Error Boundary - Error details:', error);
+    console.error('🚨 ERROR BOUNDARY CAUGHT ERROR:', error.message);
+    console.error('Error stack:', error.stack);
+    console.error('Component stack:', errorInfo.componentStack);
     
-    // Check if it's a JSON parse error
-    if (error.message.includes('JSON') || 
-        error.message.includes('parse') || 
-        error.message.includes('Unexpected') ||
-        error.message.includes('SyntaxError') ||
-        error.message.includes('Unexpected token') ||
-        error.message.includes('Unexpected character')) {
-      console.error('🚨 JSON Parse Error detected in Error Boundary:', error.message);
-      
-      // Auto-clear corrupted data
+    // Log additional context for debugging
+    console.error('Platform:', Platform.OS);
+    console.error('User Agent:', Platform.OS === 'web' ? navigator.userAgent : 'N/A');
+    console.error('Timestamp:', new Date().toISOString());
+    
+    // Check for common error patterns that cause web crashes
+    const errorMessage = error.message.toLowerCase();
+    const isJSONError = errorMessage.includes('json') || 
+                       errorMessage.includes('parse') || 
+                       errorMessage.includes('unexpected') ||
+                       errorMessage.includes('syntaxerror') ||
+                       errorMessage.includes('unexpected token');
+    
+    const isWebSpecificError = errorMessage.includes('indexeddb') ||
+                              errorMessage.includes('localstorage') ||
+                              errorMessage.includes('websocket') ||
+                              errorMessage.includes('fetch') ||
+                              errorMessage.includes('network');
+    
+    const isReactError = errorMessage.includes('react') ||
+                        errorMessage.includes('hook') ||
+                        errorMessage.includes('render') ||
+                        errorMessage.includes('component');
+    
+    console.error('Error classification:', {
+      isJSONError,
+      isWebSpecificError,
+      isReactError,
+      platform: Platform.OS
+    });
+    
+    // Auto-clear corrupted data for JSON errors
+    if (isJSONError) {
+      console.error('🚨 JSON Parse Error detected - clearing corrupted data');
       setTimeout(async () => {
         try {
           const AsyncStorage = await import('@react-native-async-storage/async-storage');
-          await AsyncStorage.default.multiRemove(['user', 'users', 'contracts', 'pendingUsers']);
-          console.log('✅ Corrupted data cleared from Error Boundary');
+          await AsyncStorage.default.multiRemove(['user', 'users', 'contracts', 'pendingUsers', 'clients', 'consultants', 'deals']);
+          console.log('✅ All corrupted data cleared from Error Boundary');
         } catch (clearError) {
           console.error('❌ Error clearing data from Error Boundary:', clearError);
         }
       }, 100);
+    }
+    
+    // For web-specific errors, try to recover gracefully
+    if (Platform.OS === 'web' && isWebSpecificError) {
+      console.error('🌐 Web-specific error detected - attempting recovery');
+      setTimeout(() => {
+        if (typeof window !== 'undefined') {
+          console.log('Attempting to reload page for recovery...');
+          window.location.reload();
+        }
+      }, 2000);
     }
   }
 
@@ -191,22 +228,53 @@ function UserSyncWrapper({ children }: { children: ReactNode }) {
   const { user, isLoading: authLoading } = useAuth();
   const { setCurrentUser } = useData();
   const [isInitialized, setIsInitialized] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    console.log('UserSyncWrapper: Syncing user with data context:', user?.name || 'No user');
-    console.log('UserSyncWrapper: Auth loading:', authLoading);
+    let isMounted = true;
     
-    // Wait for auth to finish loading before initializing
-    if (!authLoading) {
-      const timeoutId = setTimeout(() => {
-        setCurrentUser(user);
-        setIsInitialized(true);
-        console.log('UserSyncWrapper: Initialization complete');
-      }, 100); // Small delay to ensure everything is ready
-      
-      return () => clearTimeout(timeoutId);
-    }
+    const initializeUser = async () => {
+      try {
+        console.log('UserSyncWrapper: Starting initialization...');
+        console.log('UserSyncWrapper: User:', user?.name || 'No user');
+        console.log('UserSyncWrapper: Auth loading:', authLoading);
+        console.log('UserSyncWrapper: Platform:', Platform.OS);
+        
+        // Wait for auth to finish loading before initializing
+        if (!authLoading && isMounted) {
+          // Add extra safety delay on web to prevent race conditions
+          const delay = Platform.OS === 'web' ? 200 : 100;
+          
+          await new Promise(resolve => setTimeout(resolve, delay));
+          
+          if (isMounted) {
+            console.log('UserSyncWrapper: Setting current user...');
+            setCurrentUser(user);
+            setIsInitialized(true);
+            setError(null);
+            console.log('UserSyncWrapper: Initialization complete successfully');
+          }
+        }
+      } catch (initError) {
+        console.error('UserSyncWrapper: Error during initialization:', initError);
+        if (isMounted) {
+          setError(initError instanceof Error ? initError.message : 'Initialization failed');
+          setIsInitialized(true); // Still show the app even if there's an error
+        }
+      }
+    };
+    
+    initializeUser();
+    
+    return () => {
+      isMounted = false;
+    };
   }, [user, setCurrentUser, authLoading]);
+  
+  // Show error state if initialization failed
+  if (error) {
+    console.error('UserSyncWrapper: Showing error state:', error);
+  }
 
   // Show loading screen while initializing
   if (!isInitialized || authLoading) {
@@ -318,34 +386,79 @@ function RootLayoutNav() {
 
 export default function RootLayout() {
   const [isAppReady, setIsAppReady] = useState(false);
+  const [initError, setInitError] = useState<string | null>(null);
 
   useEffect(() => {
+    let isMounted = true;
+    
     async function prepare() {
       try {
-        console.log('RootLayout: Starting app initialization');
+        console.log('🚀 RootLayout: Starting app initialization');
+        console.log('Platform:', Platform.OS);
+        console.log('User Agent:', Platform.OS === 'web' ? navigator.userAgent : 'N/A');
+        
+        // Add web-specific initialization checks
+        if (Platform.OS === 'web') {
+          console.log('Web platform detected - performing web-specific checks...');
+          
+          // Check if required web APIs are available
+          if (typeof window === 'undefined') {
+            throw new Error('Window object not available');
+          }
+          
+          if (typeof localStorage === 'undefined') {
+            console.warn('localStorage not available - some features may not work');
+          }
+          
+          // Check for AsyncStorage compatibility
+          try {
+            const AsyncStorage = await import('@react-native-async-storage/async-storage');
+            await AsyncStorage.default.getItem('test-key');
+            console.log('✅ AsyncStorage is working on web');
+          } catch (storageError) {
+            console.warn('⚠️ AsyncStorage test failed:', storageError);
+          }
+        }
         
         // Shorter delay on web for better performance
-        await new Promise(resolve => setTimeout(resolve, Platform.OS === 'web' ? 10 : 100));
+        const delay = Platform.OS === 'web' ? 50 : 100;
+        await new Promise(resolve => setTimeout(resolve, delay));
         
-        console.log('RootLayout: App initialization complete');
-        setIsAppReady(true);
+        if (isMounted) {
+          console.log('✅ RootLayout: App initialization complete');
+          setIsAppReady(true);
+          setInitError(null);
+        }
       } catch (e) {
-        console.error('RootLayout: Error during initialization:', e);
-        setIsAppReady(true); // Still show the app even if there's an error
+        console.error('❌ RootLayout: Error during initialization:', e);
+        if (isMounted) {
+          setInitError(e instanceof Error ? e.message : 'Unknown initialization error');
+          setIsAppReady(true); // Still show the app even if there's an error
+        }
       } finally {
         // Only handle splash screen on native platforms
-        if (Platform.OS !== 'web') {
+        if (Platform.OS !== 'web' && isMounted) {
           try {
             await SplashScreen.hideAsync();
+            console.log('✅ Splash screen hidden');
           } catch (splashError) {
-            console.warn('Error hiding splash screen:', splashError);
+            console.warn('⚠️ Error hiding splash screen:', splashError);
           }
         }
       }
     }
 
     prepare();
+    
+    return () => {
+      isMounted = false;
+    };
   }, []);
+  
+  // Show initialization error if it occurred
+  if (initError) {
+    console.warn('RootLayout: Initialization error occurred but continuing:', initError);
+  }
 
   const handleErrorReset = () => {
     console.log('Error boundary reset triggered');
@@ -362,8 +475,21 @@ export default function RootLayout() {
     );
   }
 
+  const handleWebError = (error: Error, source: string) => {
+    console.error(`🌐 Web error from ${source}:`, error);
+    
+    // If it's a critical error, trigger error boundary
+    if (source === 'global' || source === 'promise') {
+      // Force error boundary to catch this
+      setTimeout(() => {
+        throw error;
+      }, 0);
+    }
+  };
+
   return (
     <ErrorBoundary onReset={handleErrorReset}>
+      <WebErrorMonitor onError={handleWebError} />
       <QueryClientProvider client={queryClient}>
         <GestureHandlerRootView style={rootLayoutStyles.gestureHandler}>
           <AuthProvider>
