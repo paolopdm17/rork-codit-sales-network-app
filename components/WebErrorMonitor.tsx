@@ -28,6 +28,20 @@ export function WebErrorMonitor({ onError }: WebErrorMonitorProps) {
       });
 
       const error = event.error || new Error(event.message);
+      
+      // Check for logout-related errors and handle gracefully
+      const errorMessage = error.message.toLowerCase();
+      if (errorMessage.includes('logout') || 
+          errorMessage.includes('auth') || 
+          errorMessage.includes('user') ||
+          errorMessage.includes('navigation') ||
+          errorMessage.includes('router')) {
+        console.log('🔄 WebErrorMonitor: Detected logout/auth related error, handling gracefully');
+        // Don't trigger full recovery for auth-related errors
+        onError?.(error, 'auth');
+        return;
+      }
+      
       onError?.(error, 'global');
       
       // Trigger recovery process for critical errors

@@ -40,7 +40,7 @@ export default function TabLayout() {
           setCurrentUser(user);
           hasSetUser.current = true;
           setTabError(null);
-        } else if (!user && !isAuthenticated && hasSetUser.current && isMounted) {
+        } else if (!user && !isAuthenticated && isMounted) {
           console.log('🔄 User not authenticated, clearing current user');
           setCurrentUser(null);
           hasSetUser.current = false;
@@ -54,12 +54,8 @@ export default function TabLayout() {
       }
     };
     
-    // Add small delay on web to prevent race conditions
-    if (Platform.OS === 'web') {
-      setTimeout(syncUser, 50);
-    } else {
-      syncUser();
-    }
+    // Immediate sync for better responsiveness
+    syncUser();
     
     return () => {
       isMounted = false;

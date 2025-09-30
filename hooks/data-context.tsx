@@ -1967,6 +1967,24 @@ export const [DataProvider, useData] = createContextHook<DataState>(() => {
     }
   };
 
+  // Effect to handle logout and clear state when user is removed
+  useEffect(() => {
+    if (!currentUser) {
+      console.log('🚪 USER LOGGED OUT - CLEARING DATA CONTEXT STATE');
+      
+      // Clear all visible data immediately
+      setVisibleContracts([]);
+      setVisibleUsers([]);
+      setVisibleClients([]);
+      setVisibleConsultants([]);
+      setVisibleDeals([]);
+      setMetrics(null);
+      
+      console.log('✅ Data context state cleared for logout');
+      return;
+    }
+  }, [currentUser]);
+
   // Effect to handle data loading and filtering when user changes
   useEffect(() => {
     if (currentUser) {

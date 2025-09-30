@@ -68,28 +68,21 @@ export default function ProfileScreen() {
         style: "destructive",
         onPress: async () => {
           try {
-            console.log('Starting logout process...');
+            console.log('🚪 Profile: Starting logout process...');
             
-            // Clear user data first
+            // Clear user data through auth context
             await logout();
-            console.log('Logout completed successfully');
+            console.log('✅ Profile: Logout completed successfully');
             
-            // Use a more reliable navigation approach
-            // First navigate to root, then to login
-            setTimeout(() => {
-              try {
-                router.replace("/");
-                console.log('Navigation to root completed');
-              } catch (navError) {
-                console.error('Navigation error:', navError);
-                // Fallback: try direct navigation to login
-                router.replace("/(auth)/login");
-              }
-            }, 100);
+            // Use immediate navigation to prevent tab state issues
+            console.log('🔄 Profile: Navigating to login...');
+            router.replace("/(auth)/login");
             
           } catch (error) {
-            console.error('Error during logout:', error);
-            Alert.alert("Errore", "Si è verificato un errore durante il logout");
+            console.error('❌ Profile: Error during logout:', error);
+            // Even if logout fails, still navigate away to prevent stuck state
+            console.log('🔄 Profile: Forcing navigation despite error...');
+            router.replace("/(auth)/login");
           }
         },
       },
