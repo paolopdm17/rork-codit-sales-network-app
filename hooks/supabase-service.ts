@@ -4,43 +4,67 @@ import { User, Contract, Client, Consultant, Deal } from '@/types';
 export class SupabaseService {
   // Users
   static async getUsers(): Promise<User[]> {
-    const { data, error } = await supabase
-      .from('users')
-      .select('*')
-      .order('created_at', { ascending: false });
+    try {
+      const { data, error } = await supabase
+        .from('users')
+        .select('*')
+        .order('created_at', { ascending: false });
 
-    if (error) {
-      console.error('Error fetching users:', error);
+      if (error) {
+        console.error('Error fetching users from Supabase:', {
+          message: error.message,
+          details: error.details,
+          hint: error.hint,
+          code: error.code
+        });
+        throw new Error(`Errore caricamento utenti: ${error.message}`);
+      }
+
+      console.log('✅ Successfully fetched users from Supabase:', data?.length || 0);
+      return data?.map(convertSupabaseUser) || [];
+    } catch (error) {
+      console.error('❌ Fatal error in getUsers:', error);
       throw error;
     }
-
-    return data?.map(convertSupabaseUser) || [];
   }
 
   static async createUser(userData: Omit<User, 'id' | 'createdAt'>): Promise<User> {
-    const insertData: Database['public']['Tables']['users']['Insert'] = {
-      email: userData.email,
-      name: userData.name,
-      role: userData.role,
-      status: userData.status || 'pending',
-      level: userData.level || 'junior',
-      admin_id: userData.adminId,
-      leader_id: userData.leaderId,
-      approved_at: userData.approvedAt?.toISOString(),
-    };
+    try {
+      const insertData: Database['public']['Tables']['users']['Insert'] = {
+        email: userData.email,
+        name: userData.name,
+        role: userData.role,
+        status: userData.status || 'pending',
+        level: userData.level || 'junior',
+        admin_id: userData.adminId,
+        leader_id: userData.leaderId,
+        approved_at: userData.approvedAt?.toISOString(),
+      };
 
-    const { data, error } = await supabase
-      .from('users')
-      .insert(insertData)
-      .select()
-      .single();
+      console.log('Creating user in Supabase:', { email: userData.email, name: userData.name, role: userData.role });
 
-    if (error) {
-      console.error('Error creating user:', error);
+      const { data, error } = await supabase
+        .from('users')
+        .insert(insertData)
+        .select()
+        .single();
+
+      if (error) {
+        console.error('Error creating user in Supabase:', {
+          message: error.message,
+          details: error.details,
+          hint: error.hint,
+          code: error.code
+        });
+        throw new Error(`Errore creazione utente: ${error.message}`);
+      }
+
+      console.log('✅ Successfully created user in Supabase:', data.id);
+      return convertSupabaseUser(data);
+    } catch (error) {
+      console.error('❌ Fatal error in createUser:', error);
       throw error;
     }
-
-    return convertSupabaseUser(data);
   }
 
   static async updateUser(userId: string, userData: Partial<User>): Promise<User> {
@@ -426,14 +450,26 @@ export class SupabaseService {
   // Utility methods
   static async testConnection(): Promise<boolean> {
     try {
+      console.log('Testing Supabase connection...');
       const { error } = await supabase
         .from('users')
-        .select('count')
+        .select('id')
         .limit(1);
 
-      return !error;
+      if (error) {
+        console.error('Supabase connection test failed:', {
+          message: error.message,
+          details: error.details,
+          hint: error.hint,
+          code: error.code
+        });
+        return false;
+      }
+
+      console.log('✅ Supabase connection successful');
+      return true;
     } catch (error) {
-      console.error('Supabase connection test failed:', error);
+      console.error('❌ Supabase connection test failed with exception:', error);
       return false;
     }
   }
